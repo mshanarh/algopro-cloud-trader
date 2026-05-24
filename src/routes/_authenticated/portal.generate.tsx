@@ -34,8 +34,9 @@ function GeneratePage() {
   const [generated, setGenerated] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  type CreateInput = { username: string; client_email?: string; ea_id?: string | null; plan: typeof PLANS[number]["v"] };
   const m = useMutation({
-    mutationFn: (vars: Parameters<typeof create>[0]["data"]) => create({ data: vars }),
+    mutationFn: (vars: CreateInput) => create({ data: vars }),
     onSuccess: (row) => {
       setGenerated(row.key);
       qc.invalidateQueries({ queryKey: ["licenses"] });

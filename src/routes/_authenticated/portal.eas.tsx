@@ -23,7 +23,7 @@ function EAsPage() {
   const [file, setFile] = useState("");
 
   const m = useMutation({
-    mutationFn: (v: Parameters<typeof create>[0]["data"]) => create({ data: v }),
+    mutationFn: (v: { name: string; description?: string; file_url?: string }) => create({ data: v }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["eas"] });
       setName(""); setDesc(""); setFile("");
