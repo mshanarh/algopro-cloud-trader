@@ -9,38 +9,140 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedPortalRouteImport } from './routes/_authenticated/portal'
+import { Route as AuthenticatedPortalProfileRouteImport } from './routes/_authenticated/portal.profile'
+import { Route as AuthenticatedPortalGenerateRouteImport } from './routes/_authenticated/portal.generate'
+import { Route as AuthenticatedPortalEasRouteImport } from './routes/_authenticated/portal.eas'
+import { Route as AuthenticatedPortalClientsRouteImport } from './routes/_authenticated/portal.clients'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedPortalRoute = AuthenticatedPortalRouteImport.update({
+  id: '/portal',
+  path: '/portal',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedPortalProfileRoute =
+  AuthenticatedPortalProfileRouteImport.update({
+    id: '/profile',
+    path: '/profile',
+    getParentRoute: () => AuthenticatedPortalRoute,
+  } as any)
+const AuthenticatedPortalGenerateRoute =
+  AuthenticatedPortalGenerateRouteImport.update({
+    id: '/generate',
+    path: '/generate',
+    getParentRoute: () => AuthenticatedPortalRoute,
+  } as any)
+const AuthenticatedPortalEasRoute = AuthenticatedPortalEasRouteImport.update({
+  id: '/eas',
+  path: '/eas',
+  getParentRoute: () => AuthenticatedPortalRoute,
+} as any)
+const AuthenticatedPortalClientsRoute =
+  AuthenticatedPortalClientsRouteImport.update({
+    id: '/clients',
+    path: '/clients',
+    getParentRoute: () => AuthenticatedPortalRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/portal': typeof AuthenticatedPortalRouteWithChildren
+  '/portal/clients': typeof AuthenticatedPortalClientsRoute
+  '/portal/eas': typeof AuthenticatedPortalEasRoute
+  '/portal/generate': typeof AuthenticatedPortalGenerateRoute
+  '/portal/profile': typeof AuthenticatedPortalProfileRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/portal': typeof AuthenticatedPortalRouteWithChildren
+  '/portal/clients': typeof AuthenticatedPortalClientsRoute
+  '/portal/eas': typeof AuthenticatedPortalEasRoute
+  '/portal/generate': typeof AuthenticatedPortalGenerateRoute
+  '/portal/profile': typeof AuthenticatedPortalProfileRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/login': typeof LoginRoute
+  '/_authenticated/portal': typeof AuthenticatedPortalRouteWithChildren
+  '/_authenticated/portal/clients': typeof AuthenticatedPortalClientsRoute
+  '/_authenticated/portal/eas': typeof AuthenticatedPortalEasRoute
+  '/_authenticated/portal/generate': typeof AuthenticatedPortalGenerateRoute
+  '/_authenticated/portal/profile': typeof AuthenticatedPortalProfileRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/portal'
+    | '/portal/clients'
+    | '/portal/eas'
+    | '/portal/generate'
+    | '/portal/profile'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/login'
+    | '/portal'
+    | '/portal/clients'
+    | '/portal/eas'
+    | '/portal/generate'
+    | '/portal/profile'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/login'
+    | '/_authenticated/portal'
+    | '/_authenticated/portal/clients'
+    | '/_authenticated/portal/eas'
+    | '/_authenticated/portal/generate'
+    | '/_authenticated/portal/profile'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +150,77 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/portal': {
+      id: '/_authenticated/portal'
+      path: '/portal'
+      fullPath: '/portal'
+      preLoaderRoute: typeof AuthenticatedPortalRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/portal/profile': {
+      id: '/_authenticated/portal/profile'
+      path: '/profile'
+      fullPath: '/portal/profile'
+      preLoaderRoute: typeof AuthenticatedPortalProfileRouteImport
+      parentRoute: typeof AuthenticatedPortalRoute
+    }
+    '/_authenticated/portal/generate': {
+      id: '/_authenticated/portal/generate'
+      path: '/generate'
+      fullPath: '/portal/generate'
+      preLoaderRoute: typeof AuthenticatedPortalGenerateRouteImport
+      parentRoute: typeof AuthenticatedPortalRoute
+    }
+    '/_authenticated/portal/eas': {
+      id: '/_authenticated/portal/eas'
+      path: '/eas'
+      fullPath: '/portal/eas'
+      preLoaderRoute: typeof AuthenticatedPortalEasRouteImport
+      parentRoute: typeof AuthenticatedPortalRoute
+    }
+    '/_authenticated/portal/clients': {
+      id: '/_authenticated/portal/clients'
+      path: '/clients'
+      fullPath: '/portal/clients'
+      preLoaderRoute: typeof AuthenticatedPortalClientsRouteImport
+      parentRoute: typeof AuthenticatedPortalRoute
+    }
   }
 }
 
+interface AuthenticatedPortalRouteChildren {
+  AuthenticatedPortalClientsRoute: typeof AuthenticatedPortalClientsRoute
+  AuthenticatedPortalEasRoute: typeof AuthenticatedPortalEasRoute
+  AuthenticatedPortalGenerateRoute: typeof AuthenticatedPortalGenerateRoute
+  AuthenticatedPortalProfileRoute: typeof AuthenticatedPortalProfileRoute
+}
+
+const AuthenticatedPortalRouteChildren: AuthenticatedPortalRouteChildren = {
+  AuthenticatedPortalClientsRoute: AuthenticatedPortalClientsRoute,
+  AuthenticatedPortalEasRoute: AuthenticatedPortalEasRoute,
+  AuthenticatedPortalGenerateRoute: AuthenticatedPortalGenerateRoute,
+  AuthenticatedPortalProfileRoute: AuthenticatedPortalProfileRoute,
+}
+
+const AuthenticatedPortalRouteWithChildren =
+  AuthenticatedPortalRoute._addFileChildren(AuthenticatedPortalRouteChildren)
+
+interface AuthenticatedRouteChildren {
+  AuthenticatedPortalRoute: typeof AuthenticatedPortalRouteWithChildren
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedPortalRoute: AuthenticatedPortalRouteWithChildren,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
