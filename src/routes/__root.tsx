@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
@@ -7,8 +7,11 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
+import { supabase } from "@/integrations/supabase/client";
 
 function NotFoundComponent() {
   return (
@@ -35,7 +38,6 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
@@ -72,21 +74,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
+      { title: "Algopro — Cloud hosting for Forex EAs" },
+      { name: "description", content: "Run MetaTrader EAs 24/7 on secure cloud VPS. Control from your phone." },
     ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-    ],
+    links: [{ rel: "stylesheet", href: appCss }],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -108,12 +99,26 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function AuthSync() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      router.invalidate();
+      queryClient.invalidateQueries();
+    });
+    return () => subscription.unsubscribe();
+  }, [router, queryClient]);
+  return null;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-
   return (
     <QueryClientProvider client={queryClient}>
+      <AuthSync />
       <Outlet />
+      <Toaster richColors position="top-center" />
     </QueryClientProvider>
   );
 }
