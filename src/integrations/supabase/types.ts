@@ -14,7 +14,110 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      expert_advisors: {
+        Row: {
+          created_at: string
+          description: string | null
+          file_url: string | null
+          id: string
+          name: string
+          owner_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          name: string
+          owner_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+        }
+        Relationships: []
+      }
+      licenses: {
+        Row: {
+          client_email: string | null
+          created_at: string
+          ea_id: string | null
+          expires_at: string
+          id: string
+          key: string
+          owner_id: string
+          plan: Database["public"]["Enums"]["license_plan"]
+          status: Database["public"]["Enums"]["license_status"]
+          username: string
+        }
+        Insert: {
+          client_email?: string | null
+          created_at?: string
+          ea_id?: string | null
+          expires_at: string
+          id?: string
+          key: string
+          owner_id: string
+          plan: Database["public"]["Enums"]["license_plan"]
+          status?: Database["public"]["Enums"]["license_status"]
+          username: string
+        }
+        Update: {
+          client_email?: string | null
+          created_at?: string
+          ea_id?: string | null
+          expires_at?: string
+          id?: string
+          key?: string
+          owner_id?: string
+          plan?: Database["public"]["Enums"]["license_plan"]
+          status?: Database["public"]["Enums"]["license_status"]
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "licenses_ea_id_fkey"
+            columns: ["ea_id"]
+            isOneToOne: false
+            referencedRelation: "expert_advisors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          full_name: string | null
+          id: string
+          mentor_id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          full_name?: string | null
+          id: string
+          mentor_id?: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          full_name?: string | null
+          id?: string
+          mentor_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +126,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      license_plan:
+        | "3_days"
+        | "5_days"
+        | "30_days"
+        | "3_months"
+        | "6_months"
+        | "1_year"
+      license_status: "active" | "expired" | "revoked"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +260,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      license_plan: [
+        "3_days",
+        "5_days",
+        "30_days",
+        "3_months",
+        "6_months",
+        "1_year",
+      ],
+      license_status: ["active", "expired", "revoked"],
+    },
   },
 } as const
