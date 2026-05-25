@@ -59,7 +59,7 @@ function Nav() {
             Features
           </a>
           <Link
-            to="/"
+            to="/login"
             className="rounded-md border border-white/20 px-4 py-2 text-sm font-medium text-white hover:bg-white/10"
           >
             Login
@@ -97,18 +97,18 @@ function Hero() {
             everything from your phone. Supports 40,000+ MT4/MT5 brokers worldwide.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <a
-              href="#get-started"
+            <Link
+              to="/login"
               className="inline-flex items-center gap-2 rounded-lg bg-[image:var(--gradient-purple)] px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-elegant)] transition hover:opacity-95"
             >
               Get Started <ArrowRight className="h-4 w-4" />
-            </a>
-            <a
-              href="#download"
+            </Link>
+            <Link
+              to="/login"
               className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white backdrop-blur hover:bg-white/10"
             >
               <Smartphone className="h-4 w-4" /> <Apple className="h-4 w-4" /> Download App
-            </a>
+            </Link>
           </div>
           <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-xs text-white/70">
             {["24/7 uptime", "Bank-grade encryption", "No phone battery drain"].map((t) => (
