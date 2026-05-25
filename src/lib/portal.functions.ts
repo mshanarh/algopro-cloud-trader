@@ -73,6 +73,36 @@ export const updateEASymbols = createServerFn({ method: "POST" })
     return { ok: true, symbols: normalized };
   });
 
+export const validateLicense = createServerFn({ method: "POST" })
+  .inputValidator((input) => z.object({
+    key: z.string().trim().min(4).max(50),
+  }).parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row, error } = await supabaseAdmin
+      .from("licenses")
+      .select("id, key, username, status, expires_at, plan, ea_id, expert_advisors(name, symbols)")
+      .eq("key", data.key.toUpperCase())
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) return { ok: false as const, reason: "Invalid licence key" };
+    const expired = new Date(row.expires_at) < new Date();
+    if (row.status !== "active" || expired) {
+      return { ok: false as const, reason: expired ? "Licence expired" : "Licence revoked" };
+    }
+    const ea = (row as any).expert_advisors;
+    return {
+      ok: true as const,
+      username: row.username,
+      expires_at: row.expires_at,
+      plan: row.plan as string,
+      ea_name: ea?.name ?? "Algopro Bot",
+      symbols: (ea?.symbols ?? []) as string[],
+    };
+  });
+
+
+
 export const listLicenses = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
