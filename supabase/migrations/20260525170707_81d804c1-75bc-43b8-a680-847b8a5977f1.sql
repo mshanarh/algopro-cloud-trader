@@ -1,0 +1,1 @@
+ALTER TABLE public.expert_advisors ADD COLUMN IF NOT EXISTS symbols text[] NOT NULL DEFAULT '{}';
