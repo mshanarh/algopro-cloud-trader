@@ -17,6 +17,7 @@ import { Route as AuthenticatedPortalProfileRouteImport } from './routes/_authen
 import { Route as AuthenticatedPortalGenerateRouteImport } from './routes/_authenticated/portal.generate'
 import { Route as AuthenticatedPortalEasRouteImport } from './routes/_authenticated/portal.eas'
 import { Route as AuthenticatedPortalClientsRouteImport } from './routes/_authenticated/portal.clients'
+import { Route as AuthenticatedPortalEasEaIdSymbolsRouteImport } from './routes/_authenticated/portal.eas.$eaId.symbols'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -60,24 +61,32 @@ const AuthenticatedPortalClientsRoute =
     path: '/clients',
     getParentRoute: () => AuthenticatedPortalRoute,
   } as any)
+const AuthenticatedPortalEasEaIdSymbolsRoute =
+  AuthenticatedPortalEasEaIdSymbolsRouteImport.update({
+    id: '/$eaId/symbols',
+    path: '/$eaId/symbols',
+    getParentRoute: () => AuthenticatedPortalEasRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/portal': typeof AuthenticatedPortalRouteWithChildren
   '/portal/clients': typeof AuthenticatedPortalClientsRoute
-  '/portal/eas': typeof AuthenticatedPortalEasRoute
+  '/portal/eas': typeof AuthenticatedPortalEasRouteWithChildren
   '/portal/generate': typeof AuthenticatedPortalGenerateRoute
   '/portal/profile': typeof AuthenticatedPortalProfileRoute
+  '/portal/eas/$eaId/symbols': typeof AuthenticatedPortalEasEaIdSymbolsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/portal': typeof AuthenticatedPortalRouteWithChildren
   '/portal/clients': typeof AuthenticatedPortalClientsRoute
-  '/portal/eas': typeof AuthenticatedPortalEasRoute
+  '/portal/eas': typeof AuthenticatedPortalEasRouteWithChildren
   '/portal/generate': typeof AuthenticatedPortalGenerateRoute
   '/portal/profile': typeof AuthenticatedPortalProfileRoute
+  '/portal/eas/$eaId/symbols': typeof AuthenticatedPortalEasEaIdSymbolsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -86,9 +95,10 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authenticated/portal': typeof AuthenticatedPortalRouteWithChildren
   '/_authenticated/portal/clients': typeof AuthenticatedPortalClientsRoute
-  '/_authenticated/portal/eas': typeof AuthenticatedPortalEasRoute
+  '/_authenticated/portal/eas': typeof AuthenticatedPortalEasRouteWithChildren
   '/_authenticated/portal/generate': typeof AuthenticatedPortalGenerateRoute
   '/_authenticated/portal/profile': typeof AuthenticatedPortalProfileRoute
+  '/_authenticated/portal/eas/$eaId/symbols': typeof AuthenticatedPortalEasEaIdSymbolsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -100,6 +110,7 @@ export interface FileRouteTypes {
     | '/portal/eas'
     | '/portal/generate'
     | '/portal/profile'
+    | '/portal/eas/$eaId/symbols'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -109,6 +120,7 @@ export interface FileRouteTypes {
     | '/portal/eas'
     | '/portal/generate'
     | '/portal/profile'
+    | '/portal/eas/$eaId/symbols'
   id:
     | '__root__'
     | '/'
@@ -119,6 +131,7 @@ export interface FileRouteTypes {
     | '/_authenticated/portal/eas'
     | '/_authenticated/portal/generate'
     | '/_authenticated/portal/profile'
+    | '/_authenticated/portal/eas/$eaId/symbols'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -185,19 +198,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPortalClientsRouteImport
       parentRoute: typeof AuthenticatedPortalRoute
     }
+    '/_authenticated/portal/eas/$eaId/symbols': {
+      id: '/_authenticated/portal/eas/$eaId/symbols'
+      path: '/$eaId/symbols'
+      fullPath: '/portal/eas/$eaId/symbols'
+      preLoaderRoute: typeof AuthenticatedPortalEasEaIdSymbolsRouteImport
+      parentRoute: typeof AuthenticatedPortalEasRoute
+    }
   }
 }
 
+interface AuthenticatedPortalEasRouteChildren {
+  AuthenticatedPortalEasEaIdSymbolsRoute: typeof AuthenticatedPortalEasEaIdSymbolsRoute
+}
+
+const AuthenticatedPortalEasRouteChildren: AuthenticatedPortalEasRouteChildren =
+  {
+    AuthenticatedPortalEasEaIdSymbolsRoute:
+      AuthenticatedPortalEasEaIdSymbolsRoute,
+  }
+
+const AuthenticatedPortalEasRouteWithChildren =
+  AuthenticatedPortalEasRoute._addFileChildren(
+    AuthenticatedPortalEasRouteChildren,
+  )
+
 interface AuthenticatedPortalRouteChildren {
   AuthenticatedPortalClientsRoute: typeof AuthenticatedPortalClientsRoute
-  AuthenticatedPortalEasRoute: typeof AuthenticatedPortalEasRoute
+  AuthenticatedPortalEasRoute: typeof AuthenticatedPortalEasRouteWithChildren
   AuthenticatedPortalGenerateRoute: typeof AuthenticatedPortalGenerateRoute
   AuthenticatedPortalProfileRoute: typeof AuthenticatedPortalProfileRoute
 }
 
 const AuthenticatedPortalRouteChildren: AuthenticatedPortalRouteChildren = {
   AuthenticatedPortalClientsRoute: AuthenticatedPortalClientsRoute,
-  AuthenticatedPortalEasRoute: AuthenticatedPortalEasRoute,
+  AuthenticatedPortalEasRoute: AuthenticatedPortalEasRouteWithChildren,
   AuthenticatedPortalGenerateRoute: AuthenticatedPortalGenerateRoute,
   AuthenticatedPortalProfileRoute: AuthenticatedPortalProfileRoute,
 }
@@ -225,3 +260,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

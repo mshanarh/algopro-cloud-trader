@@ -49,6 +49,30 @@ export const createEA = createServerFn({ method: "POST" })
     return row;
   });
 
+export const getEA = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ context, data }) => {
+    const { data: row, error } = await context.supabase
+      .from("expert_advisors").select("*").eq("id", data.id).eq("owner_id", context.userId).single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+export const updateEASymbols = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({
+    id: z.string().uuid(),
+    symbols: z.array(z.string().trim().min(1).max(20).regex(/^[A-Z0-9_.]+$/i)).max(100),
+  }).parse(input))
+  .handler(async ({ context, data }) => {
+    const normalized = Array.from(new Set(data.symbols.map((s) => s.toUpperCase())));
+    const { error } = await context.supabase
+      .from("expert_advisors").update({ symbols: normalized }).eq("id", data.id).eq("owner_id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true, symbols: normalized };
+  });
+
 export const listLicenses = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
