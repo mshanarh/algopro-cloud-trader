@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -59,16 +59,22 @@ function EAsPage() {
                 <thead>
                   <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
                     <th className="py-2 pr-3 font-semibold">Name</th>
-                    <th className="py-2 pr-3 font-semibold">Description</th>
-                    <th className="py-2 font-semibold">Added</th>
+                    <th className="py-2 pr-3 font-semibold">Symbols</th>
+                    <th className="py-2 pr-3 font-semibold">Added</th>
+                    <th className="py-2 font-semibold"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {eas.map((ea) => (
                     <tr key={ea.id} className="border-b border-border last:border-0">
                       <td className="py-3 pr-3 font-medium">{ea.name}</td>
-                      <td className="py-3 pr-3 text-muted-foreground">{ea.description || "—"}</td>
-                      <td className="py-3 text-muted-foreground">{new Date(ea.created_at).toLocaleDateString()}</td>
+                      <td className="py-3 pr-3 text-muted-foreground">{(ea.symbols ?? []).length}</td>
+                      <td className="py-3 pr-3 text-muted-foreground">{new Date(ea.created_at).toLocaleDateString()}</td>
+                      <td className="py-3 text-right">
+                        <Link to="/portal/eas/$eaId/symbols" params={{ eaId: ea.id }} className="text-sm font-medium text-primary hover:underline">
+                          Manage symbols
+                        </Link>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
