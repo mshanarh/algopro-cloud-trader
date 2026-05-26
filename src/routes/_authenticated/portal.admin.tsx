@@ -1,0 +1,113 @@
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { useSuspenseQuery, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { useState } from "react";
+import { Check, X } from "lucide-react";
+import { PageHeader } from "@/components/portal/PageHeader";
+import { adminListUsers, adminUpdateUser, getMyStatus } from "@/lib/portal.functions";
+
+const usersQ = queryOptions({ queryKey: ["admin", "users"], queryFn: () => adminListUsers() });
+
+export const Route = createFileRoute("/_authenticated/portal/admin")({
+  loader: async ({ context }) => {
+    const status = await getMyStatus();
+    if (!status.is_admin) throw redirect({ to: "/portal" });
+    await context.queryClient.ensureQueryData(usersQ);
+  },
+  component: AdminPage,
+});
+
+function AdminPage() {
+  const { data: users } = useSuspenseQuery(usersQ);
+  const qc = useQueryClient();
+  const update = useServerFn(adminUpdateUser);
+  const m = useMutation({
+    mutationFn: (v: { user_id: string; approved?: boolean; license_limit?: number }) => update({ data: v }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin", "users"] }); toast.success("Updated"); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
+  return (
+    <div>
+      <PageHeader title="Admin · User Management" subtitle="Approve new sign-ups and set licence-key limits." />
+      <div className="p-5 sm:p-8">
+        <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+          <table className="w-full text-sm">
+            <thead className="bg-secondary/50 text-xs uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3 text-left">User</th>
+                <th className="px-4 py-3 text-left">Contact</th>
+                <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-4 py-3 text-left">Licence limit</th>
+                <th className="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => <UserRow key={u.id} u={u} onSave={(v) => m.mutate({ user_id: u.id, ...v })} pending={m.isPending} />)}
+              {users.length === 0 && (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No users yet.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type User = Awaited<ReturnType<typeof adminListUsers>>[number];
+
+function UserRow({ u, onSave, pending }: { u: User; onSave: (v: { approved?: boolean; license_limit?: number }) => void; pending: boolean }) {
+  const [limit, setLimit] = useState(u.license_limit);
+  return (
+    <tr className="border-t border-border">
+      <td className="px-4 py-3">
+        <div className="font-medium">{u.display_name || u.full_name || "—"}</div>
+        <div className="text-xs text-muted-foreground">{u.full_name}</div>
+      </td>
+      <td className="px-4 py-3 text-xs">
+        <div>{u.mobile || "—"}</div>
+        <div className="text-muted-foreground">{u.tiktok_url || u.instagram_url || ""}</div>
+      </td>
+      <td className="px-4 py-3">
+        {u.approved ? (
+          <span className="rounded-full bg-accent/15 px-2.5 py-1 text-xs font-medium text-accent-foreground">Approved</span>
+        ) : (
+          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">Pending</span>
+        )}
+      </td>
+      <td className="px-4 py-3">
+        <input
+          type="number"
+          min={0}
+          max={100000}
+          value={limit}
+          onChange={(e) => setLimit(parseInt(e.target.value) || 0)}
+          className="w-24 rounded-md border border-input bg-background px-2 py-1 text-sm"
+        />
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex justify-end gap-2">
+          {limit !== u.license_limit && (
+            <button onClick={() => onSave({ license_limit: limit })} disabled={pending}
+              className="rounded-md bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90">
+              Save limit
+            </button>
+          )}
+          {!u.approved ? (
+            <button onClick={() => onSave({ approved: true })} disabled={pending}
+              className="inline-flex items-center gap-1 rounded-md bg-accent px-2.5 py-1.5 text-xs font-semibold text-accent-foreground hover:opacity-90">
+              <Check className="h-3 w-3" /> Approve
+            </button>
+          ) : (
+            <button onClick={() => onSave({ approved: false })} disabled={pending}
+              className="inline-flex items-center gap-1 rounded-md border border-destructive/30 px-2.5 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10">
+              <X className="h-3 w-3" /> Revoke
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}

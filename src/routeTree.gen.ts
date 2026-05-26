@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PendingRouteImport } from './routes/pending'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
@@ -18,8 +19,14 @@ import { Route as AuthenticatedPortalProfileRouteImport } from './routes/_authen
 import { Route as AuthenticatedPortalGenerateRouteImport } from './routes/_authenticated/portal.generate'
 import { Route as AuthenticatedPortalEasRouteImport } from './routes/_authenticated/portal.eas'
 import { Route as AuthenticatedPortalClientsRouteImport } from './routes/_authenticated/portal.clients'
+import { Route as AuthenticatedPortalAdminRouteImport } from './routes/_authenticated/portal.admin'
 import { Route as AuthenticatedPortalEasEaIdSymbolsRouteImport } from './routes/_authenticated/portal.eas.$eaId.symbols'
 
+const PendingRoute = PendingRouteImport.update({
+  id: '/pending',
+  path: '/pending',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -67,6 +74,12 @@ const AuthenticatedPortalClientsRoute =
     path: '/clients',
     getParentRoute: () => AuthenticatedPortalRoute,
   } as any)
+const AuthenticatedPortalAdminRoute =
+  AuthenticatedPortalAdminRouteImport.update({
+    id: '/admin',
+    path: '/admin',
+    getParentRoute: () => AuthenticatedPortalRoute,
+  } as any)
 const AuthenticatedPortalEasEaIdSymbolsRoute =
   AuthenticatedPortalEasEaIdSymbolsRouteImport.update({
     id: '/$eaId/symbols',
@@ -78,7 +91,9 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/login': typeof LoginRoute
+  '/pending': typeof PendingRoute
   '/portal': typeof AuthenticatedPortalRouteWithChildren
+  '/portal/admin': typeof AuthenticatedPortalAdminRoute
   '/portal/clients': typeof AuthenticatedPortalClientsRoute
   '/portal/eas': typeof AuthenticatedPortalEasRouteWithChildren
   '/portal/generate': typeof AuthenticatedPortalGenerateRoute
@@ -89,7 +104,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/login': typeof LoginRoute
+  '/pending': typeof PendingRoute
   '/portal': typeof AuthenticatedPortalRouteWithChildren
+  '/portal/admin': typeof AuthenticatedPortalAdminRoute
   '/portal/clients': typeof AuthenticatedPortalClientsRoute
   '/portal/eas': typeof AuthenticatedPortalEasRouteWithChildren
   '/portal/generate': typeof AuthenticatedPortalGenerateRoute
@@ -102,7 +119,9 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/app': typeof AppRoute
   '/login': typeof LoginRoute
+  '/pending': typeof PendingRoute
   '/_authenticated/portal': typeof AuthenticatedPortalRouteWithChildren
+  '/_authenticated/portal/admin': typeof AuthenticatedPortalAdminRoute
   '/_authenticated/portal/clients': typeof AuthenticatedPortalClientsRoute
   '/_authenticated/portal/eas': typeof AuthenticatedPortalEasRouteWithChildren
   '/_authenticated/portal/generate': typeof AuthenticatedPortalGenerateRoute
@@ -115,7 +134,9 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/login'
+    | '/pending'
     | '/portal'
+    | '/portal/admin'
     | '/portal/clients'
     | '/portal/eas'
     | '/portal/generate'
@@ -126,7 +147,9 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/login'
+    | '/pending'
     | '/portal'
+    | '/portal/admin'
     | '/portal/clients'
     | '/portal/eas'
     | '/portal/generate'
@@ -138,7 +161,9 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/app'
     | '/login'
+    | '/pending'
     | '/_authenticated/portal'
+    | '/_authenticated/portal/admin'
     | '/_authenticated/portal/clients'
     | '/_authenticated/portal/eas'
     | '/_authenticated/portal/generate'
@@ -151,10 +176,18 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AppRoute: typeof AppRoute
   LoginRoute: typeof LoginRoute
+  PendingRoute: typeof PendingRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/pending': {
+      id: '/pending'
+      path: '/pending'
+      fullPath: '/pending'
+      preLoaderRoute: typeof PendingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -218,6 +251,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPortalClientsRouteImport
       parentRoute: typeof AuthenticatedPortalRoute
     }
+    '/_authenticated/portal/admin': {
+      id: '/_authenticated/portal/admin'
+      path: '/admin'
+      fullPath: '/portal/admin'
+      preLoaderRoute: typeof AuthenticatedPortalAdminRouteImport
+      parentRoute: typeof AuthenticatedPortalRoute
+    }
     '/_authenticated/portal/eas/$eaId/symbols': {
       id: '/_authenticated/portal/eas/$eaId/symbols'
       path: '/$eaId/symbols'
@@ -244,6 +284,7 @@ const AuthenticatedPortalEasRouteWithChildren =
   )
 
 interface AuthenticatedPortalRouteChildren {
+  AuthenticatedPortalAdminRoute: typeof AuthenticatedPortalAdminRoute
   AuthenticatedPortalClientsRoute: typeof AuthenticatedPortalClientsRoute
   AuthenticatedPortalEasRoute: typeof AuthenticatedPortalEasRouteWithChildren
   AuthenticatedPortalGenerateRoute: typeof AuthenticatedPortalGenerateRoute
@@ -251,6 +292,7 @@ interface AuthenticatedPortalRouteChildren {
 }
 
 const AuthenticatedPortalRouteChildren: AuthenticatedPortalRouteChildren = {
+  AuthenticatedPortalAdminRoute: AuthenticatedPortalAdminRoute,
   AuthenticatedPortalClientsRoute: AuthenticatedPortalClientsRoute,
   AuthenticatedPortalEasRoute: AuthenticatedPortalEasRouteWithChildren,
   AuthenticatedPortalGenerateRoute: AuthenticatedPortalGenerateRoute,
@@ -277,7 +319,18 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AppRoute: AppRoute,
   LoginRoute: LoginRoute,
+  PendingRoute: PendingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

@@ -6,21 +6,36 @@ import {
   useNavigate,
   useRouterState,
 } from "@tanstack/react-router";
-import { LayoutDashboard, KeyRound, Bot, Users, Settings, LogOut, Menu, X } from "lucide-react";
+import { LayoutDashboard, KeyRound, Bot, Users, Settings, LogOut, Menu, X, ShieldCheck } from "lucide-react";
 import { useState } from "react";
+import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { getMyStatus } from "@/lib/portal.functions";
+
+const statusQ = queryOptions({ queryKey: ["my-status"], queryFn: () => getMyStatus() });
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: async () => {
+  beforeLoad: async ({ context, location }) => {
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/login" });
+    // Approval gate (skip the pending page itself to avoid loop — pending is public)
+    if (location.pathname !== "/pending") {
+      try {
+        const status = await getMyStatus();
+        if (!status.approved) throw redirect({ to: "/pending" });
+      } catch (e) {
+        if (e && typeof e === "object" && "to" in e) throw e;
+        throw redirect({ to: "/pending" });
+      }
+    }
+    await context.queryClient.ensureQueryData(statusQ);
   },
   component: PortalLayout,
 });
 
-const NAV = [
+const BASE_NAV = [
   { to: "/portal", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/portal/generate", label: "Generate Licence", icon: KeyRound },
+  { to: "/portal/generate", label: "Licence Key", icon: KeyRound },
   { to: "/portal/eas", label: "Expert Advisors", icon: Bot },
   { to: "/portal/clients", label: "Clients", icon: Users },
   { to: "/portal/profile", label: "Profile", icon: Settings },
@@ -30,6 +45,10 @@ function PortalLayout() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
+  const { data: status } = useSuspenseQuery(statusQ);
+  const NAV = status.is_admin
+    ? [...BASE_NAV, { to: "/portal/admin", label: "Admin", icon: ShieldCheck } as const]
+    : BASE_NAV;
 
   const signOut = async () => {
     await supabase.auth.signOut();

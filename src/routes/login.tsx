@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 
@@ -46,15 +47,16 @@ function LoginPage() {
         });
         if (error) throw error;
         if (!data.session) {
-          // No session = email confirmation required. Try sign-in anyway in case auto-confirm is on.
           const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
           if (signInErr) {
-            toast.success("Account created! Check your email to confirm.");
+            toast.success("Account created! Check your email to confirm, then sign in.");
             setMode("signin");
             return;
           }
         }
-        toast.success("Welcome Master");
+        toast.success("Account created — waiting for admin approval");
+        navigate({ to: "/pending" });
+        return;
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -81,6 +83,13 @@ function LoginPage() {
   return (
     <main className="grid min-h-screen place-items-center bg-[image:var(--gradient-navy)] px-5 py-10">
       <div className="w-full max-w-md">
+        <Link
+          to="/"
+          className="mb-4 inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm text-white backdrop-blur transition hover:bg-white/20"
+          aria-label="Back to landing page"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back
+        </Link>
         <Link to="/" className="mb-6 flex items-center justify-center gap-2 text-white">
           <span className="grid h-9 w-9 place-items-center rounded-lg bg-[image:var(--gradient-purple)] font-black">A</span>
           <span className="text-xl font-bold">Algopro</span>

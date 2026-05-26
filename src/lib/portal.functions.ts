@@ -131,6 +131,15 @@ export const createLicense = createServerFn({ method: "POST" })
     plan: PlanEnum,
   }).parse(input))
   .handler(async ({ context, data }) => {
+    // Enforce approval + license limit
+    const { data: profile } = await context.supabase
+      .from("profiles").select("approved, license_limit").eq("id", context.userId).single();
+    if (!profile?.approved) throw new Error("Account not approved by admin yet");
+    const { count } = await context.supabase
+      .from("licenses").select("id", { count: "exact", head: true }).eq("owner_id", context.userId);
+    if ((count ?? 0) >= (profile.license_limit ?? 0)) {
+      throw new Error(`Licence limit reached (${profile.license_limit}). Contact admin to increase.`);
+    }
     const days = PlanDays[data.plan];
     const expires_at = new Date(Date.now() + days * 86400 * 1000).toISOString();
     const { data: row, error } = await context.supabase
@@ -145,6 +154,53 @@ export const createLicense = createServerFn({ method: "POST" })
       }).select().single();
     if (error) throw new Error(error.message);
     return row;
+  });
+
+// ===== Admin functions =====
+export const getMyStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const [{ data: profile }, { data: roles }] = await Promise.all([
+      context.supabase.from("profiles").select("approved, license_limit, full_name, display_name").eq("id", context.userId).single(),
+      context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
+    ]);
+    return {
+      approved: !!profile?.approved,
+      license_limit: profile?.license_limit ?? 0,
+      is_admin: (roles ?? []).some((r) => r.role === "admin"),
+      name: profile?.display_name || profile?.full_name || "Trader",
+    };
+  });
+
+export const adminListUsers = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { data, error } = await context.supabase
+      .from("profiles")
+      .select("id, full_name, display_name, mobile, tiktok_url, instagram_url, approved, license_limit, created_at")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const adminUpdateUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({
+    user_id: z.string().uuid(),
+    approved: z.boolean().optional(),
+    license_limit: z.number().int().min(0).max(100000).optional(),
+  }).parse(input))
+  .handler(async ({ context, data }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Forbidden");
+    const patch: { approved?: boolean; license_limit?: number } = {};
+    if (data.approved !== undefined) patch.approved = data.approved;
+    if (data.license_limit !== undefined) patch.license_limit = data.license_limit;
+    const { error } = await context.supabase.from("profiles").update(patch).eq("id", data.user_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 export const updateLicenseStatus = createServerFn({ method: "POST" })
