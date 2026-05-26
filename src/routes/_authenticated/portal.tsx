@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { getDashboard } from "@/lib/portal.functions";
 import { PageHeader } from "@/components/portal/PageHeader";
@@ -73,9 +73,9 @@ function Dashboard() {
           <div className="h-2 overflow-hidden rounded-full bg-secondary">
             <div className="h-full bg-[image:var(--gradient-purple)]" style={{ width: `${usedPct}%` }} />
           </div>
-          <button className="mt-5 w-full rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:opacity-90">
-            Request More Keys
-          </button>
+          <Link to="/portal/generate" className="mt-5 block w-full rounded-lg bg-accent px-4 py-2 text-center text-sm font-semibold text-accent-foreground hover:opacity-90">
+            Generate Licence Key
+          </Link>
         </div>
 
         {/* Active subs */}
