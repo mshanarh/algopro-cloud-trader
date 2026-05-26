@@ -195,7 +195,7 @@ export const adminUpdateUser = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Forbidden");
-    const patch: Record<string, unknown> = {};
+    const patch: { approved?: boolean; license_limit?: number } = {};
     if (data.approved !== undefined) patch.approved = data.approved;
     if (data.license_limit !== undefined) patch.license_limit = data.license_limit;
     const { error } = await context.supabase.from("profiles").update(patch).eq("id", data.user_id);
