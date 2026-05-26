@@ -45,6 +45,10 @@ function PortalLayout() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
+  const { data: status } = useSuspenseQuery(statusQ);
+  const NAV = status.is_admin
+    ? [...BASE_NAV, { to: "/portal/admin", label: "Admin", icon: ShieldCheck } as const]
+    : BASE_NAV;
 
   const signOut = async () => {
     await supabase.auth.signOut();
