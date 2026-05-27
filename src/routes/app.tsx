@@ -307,6 +307,9 @@ function HomeScreen({ session }: { session: Session }) {
       </div>
 
       <div className="mt-5 rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-5">
+        {session.ea_image && (
+          <img src={session.ea_image} alt={session.ea_name} className="mb-4 h-32 w-full rounded-2xl object-cover" />
+        )}
         <div className="flex items-center gap-3">
           <div className={`grid h-12 w-12 place-items-center rounded-2xl ${running ? "bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/40" : "bg-white/10"}`}>
             <Bot className="h-6 w-6 text-white" />
