@@ -21,12 +21,13 @@ function EAsPage() {
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
   const [file, setFile] = useState("");
+  const [image, setImage] = useState("");
 
   const m = useMutation({
-    mutationFn: (v: { name: string; description?: string; file_url?: string }) => create({ data: v }),
+    mutationFn: (v: { name: string; description?: string; file_url?: string; image_url?: string }) => create({ data: v }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["eas"] });
-      setName(""); setDesc(""); setFile("");
+      setName(""); setDesc(""); setFile(""); setImage("");
       toast.success("EA added");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
@@ -36,11 +37,13 @@ function EAsPage() {
     <div>
       <PageHeader title="Expert Advisors" subtitle="Add the EAs you want to license and host." />
       <div className="grid gap-5 p-5 sm:p-8 lg:grid-cols-[1fr_2fr]">
-        <form onSubmit={(e) => { e.preventDefault(); if (!name.trim()) return; m.mutate({ name, description: desc, file_url: file }); }} className="space-y-4 rounded-2xl border border-border bg-card p-6 h-fit">
+        <form onSubmit={(e) => { e.preventDefault(); if (!name.trim()) return; m.mutate({ name, description: desc, file_url: file, image_url: image }); }} className="space-y-4 rounded-2xl border border-border bg-card p-6 h-fit">
           <h2 className="font-semibold">Add New EA</h2>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="EA Name (e.g. Ultra Space Prime)" maxLength={100} required className="input" />
           <textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Description" rows={3} maxLength={500} className="input" />
           <input value={file} onChange={(e) => setFile(e.target.value)} placeholder="File URL (.ex5 / .ex4)" maxLength={500} className="input" />
+          <input value={image} onChange={(e) => setImage(e.target.value)} placeholder="Image URL (shown in mobile app)" maxLength={500} className="input" />
+          {image && <img src={image} alt="preview" className="h-24 w-24 rounded-lg object-cover" />}
           <button type="submit" disabled={m.isPending} className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground hover:opacity-90 disabled:opacity-50">
             <Plus className="h-4 w-4" /> Add Expert Advisor
           </button>

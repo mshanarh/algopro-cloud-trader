@@ -41,12 +41,35 @@ export const createEA = createServerFn({ method: "POST" })
     name: z.string().trim().min(1).max(100),
     description: z.string().trim().max(500).optional(),
     file_url: z.string().trim().max(500).optional(),
+    image_url: z.string().trim().max(500).optional(),
   }).parse(input))
   .handler(async ({ context, data }) => {
     const { error, data: row } = await context.supabase
       .from("expert_advisors").insert({ ...data, owner_id: context.userId }).select().single();
     if (error) throw new Error(error.message);
     return row;
+  });
+
+export const validateMentor = createServerFn({ method: "POST" })
+  .inputValidator((input) => z.object({
+    email: z.string().trim().email().max(255),
+    mentor_id: z.string().trim().min(3).max(50),
+  }).parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const email = data.email.toLowerCase();
+    const mentor_id = data.mentor_id.toUpperCase().trim();
+    const { data: users } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const u = users?.users.find((x) => x.email?.toLowerCase() === email);
+    if (!u) return { ok: false as const, reason: "Email not registered" };
+    const { data: profile } = await supabaseAdmin
+      .from("profiles").select("mentor_id, approved, display_name, full_name").eq("id", u.id).maybeSingle();
+    if (!profile) return { ok: false as const, reason: "Profile not found" };
+    if (profile.mentor_id !== mentor_id) return { ok: false as const, reason: "Mentor ID does not match" };
+    if (!profile.approved) return { ok: false as const, reason: "Account pending admin approval" };
+    const { data: roles } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", u.id);
+    const is_admin = (roles ?? []).some((r) => r.role === "admin");
+    return { ok: true as const, is_admin, name: profile.display_name || profile.full_name || "Trader" };
   });
 
 export const getEA = createServerFn({ method: "GET" })
@@ -81,7 +104,7 @@ export const validateLicense = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row, error } = await supabaseAdmin
       .from("licenses")
-      .select("id, key, username, status, expires_at, plan, ea_id, expert_advisors(name, symbols)")
+      .select("id, key, username, status, expires_at, plan, ea_id, expert_advisors(name, symbols, image_url)")
       .eq("key", data.key.toUpperCase())
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -98,6 +121,7 @@ export const validateLicense = createServerFn({ method: "POST" })
       plan: row.plan as string,
       ea_name: ea?.name ?? "Algopro Bot",
       symbols: (ea?.symbols ?? []) as string[],
+      ea_image: (ea?.image_url ?? null) as string | null,
     };
   });
 

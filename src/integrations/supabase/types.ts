@@ -20,6 +20,7 @@ export type Database = {
           description: string | null
           file_url: string | null
           id: string
+          image_url: string | null
           name: string
           owner_id: string
           symbols: string[]
@@ -29,6 +30,7 @@ export type Database = {
           description?: string | null
           file_url?: string | null
           id?: string
+          image_url?: string | null
           name: string
           owner_id: string
           symbols?: string[]
@@ -38,6 +40,7 @@ export type Database = {
           description?: string | null
           file_url?: string | null
           id?: string
+          image_url?: string | null
           name?: string
           owner_id?: string
           symbols?: string[]

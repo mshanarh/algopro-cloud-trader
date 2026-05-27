@@ -7,11 +7,14 @@ import {
   HelpCircle, Activity, Wifi, Battery, Signal,
   TrendingUp, TrendingDown, LogOut, Cpu, MemoryStick, ShieldCheck,
 } from "lucide-react";
-import { validateLicense } from "@/lib/portal.functions";
+import { validateLicense, validateMentor } from "@/lib/portal.functions";
 
 export const Route = createFileRoute("/app")({
   component: PhoneApp,
-  head: () => ({ meta: [{ title: "Algopro — Mobile" }] }),
+  head: () => ({
+    meta: [{ title: "Algopro — Mobile" }],
+    links: [{ rel: "manifest", href: "/manifest.webmanifest" }],
+  }),
 });
 
 type Session = {
@@ -21,7 +24,10 @@ type Session = {
   symbols: string[];
   expires_at: string;
   plan: string;
+  ea_image?: string | null;
 };
+
+type Mentor = { email: string; mentor_id: string; name: string; is_admin: boolean };
 
 type Trade = {
   id: number;
@@ -34,6 +40,7 @@ type Trade = {
 };
 
 const STORAGE_KEY = "algopro.session";
+const MENTOR_KEY = "algopro.mentor";
 
 function PhoneApp() {
   return (
@@ -86,23 +93,29 @@ function StatusBar() {
 }
 
 function AppRouter() {
+  const [mentor, setMentor] = useState<Mentor | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [tab, setTab] = useState<"home" | "trades" | "settings" | "help">("home");
 
   useEffect(() => {
     try {
+      const m = localStorage.getItem(MENTOR_KEY);
+      if (m) setMentor(JSON.parse(m));
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) setSession(JSON.parse(raw));
     } catch {}
   }, []);
 
-  const onLogin = (s: Session) => {
-    setSession(s);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
-  };
+  const onMentor = (m: Mentor) => { setMentor(m); localStorage.setItem(MENTOR_KEY, JSON.stringify(m)); };
+  const onLogin = (s: Session) => { setSession(s); localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); };
   const onLogout = () => {
     setSession(null);
     localStorage.removeItem(STORAGE_KEY);
+    setTab("home");
+  };
+  const onSignOutAll = () => {
+    setSession(null); setMentor(null);
+    localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(MENTOR_KEY);
     setTab("home");
   };
 
@@ -110,18 +123,67 @@ function AppRouter() {
     <div className="flex h-full flex-col bg-[#0b1020] text-white">
       <StatusBar />
       <div className="flex-1 overflow-y-auto pb-24">
-        {!session && <LicenseGate onSuccess={onLogin} />}
-        {session && tab === "home" && <HomeScreen session={session} />}
-        {session && tab === "trades" && <TradesScreen session={session} />}
-        {session && tab === "settings" && <SettingsScreen session={session} onLogout={onLogout} />}
-        {session && tab === "help" && <HelpScreen />}
+        {!mentor && <MentorGate onSuccess={onMentor} />}
+        {mentor && !session && <LicenseGate mentor={mentor} onSuccess={onLogin} onSignOut={onSignOutAll} />}
+        {mentor && session && tab === "home" && <HomeScreen session={session} />}
+        {mentor && session && tab === "trades" && <TradesScreen session={session} />}
+        {mentor && session && tab === "settings" && <SettingsScreen session={session} onLogout={onLogout} />}
+        {mentor && session && tab === "help" && <HelpScreen />}
       </div>
-      {session && <BottomNav tab={tab} setTab={setTab} />}
+      {mentor && session && <BottomNav tab={tab} setTab={setTab} />}
     </div>
   );
 }
 
-function LicenseGate({ onSuccess }: { onSuccess: (s: Session) => void }) {
+function MentorGate({ onSuccess }: { onSuccess: (m: Mentor) => void }) {
+  const validate = useServerFn(validateMentor);
+  const [email, setEmail] = useState("");
+  const [mentorId, setMentorId] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !mentorId.trim()) return;
+    setLoading(true);
+    try {
+      const res = await validate({ data: { email, mentor_id: mentorId } });
+      if (!res.ok) { toast.error(res.reason); return; }
+      toast.success(res.is_admin ? `Welcome Admin ${res.name}` : `Welcome ${res.name}`);
+      onSuccess({ email, mentor_id: mentorId.toUpperCase(), name: res.name, is_admin: res.is_admin });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="flex h-full flex-col items-center justify-center px-7 pb-8 pt-10 text-center">
+      <div className="mb-6 grid h-20 w-20 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-2xl shadow-violet-500/40">
+        <Bot className="h-10 w-10 text-white" />
+      </div>
+      <h1 className="text-2xl font-bold">Algopro</h1>
+      <p className="mt-1 text-sm text-white/60">Sign in with your email and Mentor ID</p>
+
+      <form onSubmit={submit} className="mt-8 w-full space-y-3">
+        <input
+          value={email} onChange={(e) => setEmail(e.target.value)}
+          type="email" placeholder="you@email.com" autoComplete="email"
+          className="w-full rounded-xl border border-white/10 bg-white/5 py-3 px-4 text-sm text-white placeholder:text-white/30 outline-none focus:border-violet-400"
+        />
+        <input
+          value={mentorId} onChange={(e) => setMentorId(e.target.value.toUpperCase())}
+          placeholder="MENTOR ID (AP-XXXXXXXX)" maxLength={50}
+          className="w-full rounded-xl border border-white/10 bg-white/5 py-3 px-4 text-center font-mono text-sm tracking-wider text-white placeholder:text-white/30 outline-none focus:border-violet-400"
+        />
+        <button type="submit" disabled={loading} className="w-full rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 py-3 text-sm font-semibold shadow-lg shadow-violet-500/30 disabled:opacity-60">
+          {loading ? "Verifying..." : "Continue"}
+        </button>
+      </form>
+      <p className="mt-6 text-[11px] text-white/40">Your Mentor ID is shown in the portal profile.</p>
+    </div>
+  );
+}
+
+function LicenseGate({ mentor, onSuccess, onSignOut }: { mentor: Mentor; onSuccess: (s: Session) => void; onSignOut: () => void }) {
   const validate = useServerFn(validateLicense);
   const [key, setKey] = useState("");
   const [loading, setLoading] = useState(false);
@@ -144,6 +206,7 @@ function LicenseGate({ onSuccess }: { onSuccess: (s: Session) => void }) {
         symbols: res.symbols,
         expires_at: res.expires_at,
         plan: res.plan,
+        ea_image: res.ea_image,
       });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Validation failed");
@@ -157,8 +220,8 @@ function LicenseGate({ onSuccess }: { onSuccess: (s: Session) => void }) {
       <div className="mb-6 grid h-20 w-20 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-2xl shadow-violet-500/40">
         <Bot className="h-10 w-10 text-white" />
       </div>
-      <h1 className="text-2xl font-bold">Algopro</h1>
-      <p className="mt-1 text-sm text-white/60">Enter your licence key to unlock your bot.</p>
+      <h1 className="text-2xl font-bold">Add Licence Key</h1>
+      <p className="mt-1 text-sm text-white/60">Signed in as {mentor.name}{mentor.is_admin ? " · Admin" : ""}</p>
 
       <form onSubmit={submit} className="mt-8 w-full space-y-3">
         <div className="relative">
@@ -182,7 +245,10 @@ function LicenseGate({ onSuccess }: { onSuccess: (s: Session) => void }) {
         </button>
       </form>
 
-      <p className="mt-6 text-[11px] text-white/40">
+      <button onClick={onSignOut} className="mt-4 text-[11px] text-white/40 underline">
+        Use a different account
+      </button>
+      <p className="mt-3 text-[11px] text-white/40">
         Don't have a key? Contact your mentor.
       </p>
     </div>
@@ -241,6 +307,9 @@ function HomeScreen({ session }: { session: Session }) {
       </div>
 
       <div className="mt-5 rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-5">
+        {session.ea_image && (
+          <img src={session.ea_image} alt={session.ea_name} className="mb-4 h-32 w-full rounded-2xl object-cover" />
+        )}
         <div className="flex items-center gap-3">
           <div className={`grid h-12 w-12 place-items-center rounded-2xl ${running ? "bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/40" : "bg-white/10"}`}>
             <Bot className="h-6 w-6 text-white" />
