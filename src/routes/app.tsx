@@ -7,11 +7,14 @@ import {
   HelpCircle, Activity, Wifi, Battery, Signal,
   TrendingUp, TrendingDown, LogOut, Cpu, MemoryStick, ShieldCheck,
 } from "lucide-react";
-import { validateLicense } from "@/lib/portal.functions";
+import { validateLicense, validateMentor } from "@/lib/portal.functions";
 
 export const Route = createFileRoute("/app")({
   component: PhoneApp,
-  head: () => ({ meta: [{ title: "Algopro — Mobile" }] }),
+  head: () => ({
+    meta: [{ title: "Algopro — Mobile" }],
+    links: [{ rel: "manifest", href: "/manifest.webmanifest" }],
+  }),
 });
 
 type Session = {
@@ -21,7 +24,10 @@ type Session = {
   symbols: string[];
   expires_at: string;
   plan: string;
+  ea_image?: string | null;
 };
+
+type Mentor = { email: string; mentor_id: string; name: string; is_admin: boolean };
 
 type Trade = {
   id: number;
@@ -34,6 +40,7 @@ type Trade = {
 };
 
 const STORAGE_KEY = "algopro.session";
+const MENTOR_KEY = "algopro.mentor";
 
 function PhoneApp() {
   return (
