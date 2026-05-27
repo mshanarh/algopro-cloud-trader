@@ -183,7 +183,7 @@ function MentorGate({ onSuccess }: { onSuccess: (m: Mentor) => void }) {
   );
 }
 
-function LicenseGate({ onSuccess }: { onSuccess: (s: Session) => void }) {
+function LicenseGate({ mentor, onSuccess, onSignOut }: { mentor: Mentor; onSuccess: (s: Session) => void; onSignOut: () => void }) {
   const validate = useServerFn(validateLicense);
   const [key, setKey] = useState("");
   const [loading, setLoading] = useState(false);
@@ -206,6 +206,7 @@ function LicenseGate({ onSuccess }: { onSuccess: (s: Session) => void }) {
         symbols: res.symbols,
         expires_at: res.expires_at,
         plan: res.plan,
+        ea_image: res.ea_image,
       });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Validation failed");
@@ -219,8 +220,8 @@ function LicenseGate({ onSuccess }: { onSuccess: (s: Session) => void }) {
       <div className="mb-6 grid h-20 w-20 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-2xl shadow-violet-500/40">
         <Bot className="h-10 w-10 text-white" />
       </div>
-      <h1 className="text-2xl font-bold">Algopro</h1>
-      <p className="mt-1 text-sm text-white/60">Enter your licence key to unlock your bot.</p>
+      <h1 className="text-2xl font-bold">Add Licence Key</h1>
+      <p className="mt-1 text-sm text-white/60">Signed in as {mentor.name}{mentor.is_admin ? " · Admin" : ""}</p>
 
       <form onSubmit={submit} className="mt-8 w-full space-y-3">
         <div className="relative">
