@@ -245,7 +245,10 @@ function LicenseGate({ mentor, onSuccess, onSignOut }: { mentor: Mentor; onSucce
         </button>
       </form>
 
-      <p className="mt-6 text-[11px] text-white/40">
+      <button onClick={onSignOut} className="mt-4 text-[11px] text-white/40 underline">
+        Use a different account
+      </button>
+      <p className="mt-3 text-[11px] text-white/40">
         Don't have a key? Contact your mentor.
       </p>
     </div>
