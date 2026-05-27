@@ -104,7 +104,7 @@ export const validateLicense = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row, error } = await supabaseAdmin
       .from("licenses")
-      .select("id, key, username, status, expires_at, plan, ea_id, expert_advisors(name, symbols)")
+      .select("id, key, username, status, expires_at, plan, ea_id, expert_advisors(name, symbols, image_url)")
       .eq("key", data.key.toUpperCase())
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -121,6 +121,7 @@ export const validateLicense = createServerFn({ method: "POST" })
       plan: row.plan as string,
       ea_name: ea?.name ?? "Algopro Bot",
       symbols: (ea?.symbols ?? []) as string[],
+      ea_image: (ea?.image_url ?? null) as string | null,
     };
   });
 
