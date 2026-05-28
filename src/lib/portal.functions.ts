@@ -183,14 +183,17 @@ export const createLicense = createServerFn({ method: "POST" })
     plan: PlanEnum,
   }).parse(input))
   .handler(async ({ context, data }) => {
-    // Enforce approval + license limit
+    // Enforce approval + license limit (admins bypass limit)
     const { data: profile } = await context.supabase
       .from("profiles").select("approved, license_limit").eq("id", context.userId).single();
     if (!profile?.approved) throw new Error("Account not approved by admin yet");
-    const { count } = await context.supabase
-      .from("licenses").select("id", { count: "exact", head: true }).eq("owner_id", context.userId);
-    if ((count ?? 0) >= (profile.license_limit ?? 0)) {
-      throw new Error(`Licence limit reached (${profile.license_limit}). Contact admin to increase.`);
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) {
+      const { count } = await context.supabase
+        .from("licenses").select("id", { count: "exact", head: true }).eq("owner_id", context.userId);
+      if ((count ?? 0) >= (profile.license_limit ?? 0)) {
+        throw new Error(`Licence limit reached (${profile.license_limit}). Contact admin to increase.`);
+      }
     }
     const days = PlanDays[data.plan];
     const expires_at = new Date(Date.now() + days * 86400 * 1000).toISOString();
@@ -206,6 +209,33 @@ export const createLicense = createServerFn({ method: "POST" })
       }).select().single();
     if (error) throw new Error(error.message);
     return row;
+  });
+
+export const adminReactivateByEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({
+    email: z.string().trim().email().max(255),
+    activations: z.number().int().min(1).max(100).default(1),
+  }).parse(input))
+  .handler(async ({ context, data }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const email = data.email.toLowerCase();
+    // 1) Approve the portal account if it exists
+    const { data: users } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const u = users?.users.find((x) => x.email?.toLowerCase() === email);
+    if (u) {
+      await supabaseAdmin.from("profiles").update({ approved: true }).eq("id", u.id);
+    }
+    // 2) Reactivate every licence issued to this client email
+    const { data: lics, error } = await supabaseAdmin
+      .from("licenses")
+      .update({ activations_remaining: data.activations, status: "active" })
+      .ilike("client_email", email)
+      .select("id");
+    if (error) throw new Error(error.message);
+    return { ok: true, portal_approved: !!u, licences_reactivated: lics?.length ?? 0 };
   });
 
 // ===== Admin functions =====
