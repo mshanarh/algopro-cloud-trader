@@ -3,9 +3,9 @@ import { useSuspenseQuery, queryOptions, useMutation, useQueryClient } from "@ta
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { useState } from "react";
-import { Check, X } from "lucide-react";
+import { Check, X, Mail } from "lucide-react";
 import { PageHeader } from "@/components/portal/PageHeader";
-import { adminListUsers, adminUpdateUser, getMyStatus } from "@/lib/portal.functions";
+import { adminListUsers, adminUpdateUser, adminReactivateByEmail, getMyStatus } from "@/lib/portal.functions";
 
 const usersQ = queryOptions({ queryKey: ["admin", "users"], queryFn: () => adminListUsers() });
 
@@ -22,16 +22,55 @@ function AdminPage() {
   const { data: users } = useSuspenseQuery(usersQ);
   const qc = useQueryClient();
   const update = useServerFn(adminUpdateUser);
+  const reactivate = useServerFn(adminReactivateByEmail);
+  const [reEmail, setReEmail] = useState("");
   const m = useMutation({
     mutationFn: (v: { user_id: string; approved?: boolean; license_limit?: number }) => update({ data: v }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin", "users"] }); toast.success("Updated"); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
+  const reM = useMutation({
+    mutationFn: (email: string) => reactivate({ data: { email, activations: 1 } }),
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ["admin", "users"] });
+      toast.success(`Reactivated · portal ${r.portal_approved ? "approved" : "n/a"} · ${r.licences_reactivated} licence(s)`);
+      setReEmail("");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
 
   return (
     <div>
-      <PageHeader title="Admin · User Management" subtitle="Approve new sign-ups and set licence-key limits." />
-      <div className="p-5 sm:p-8">
+      <PageHeader title="Admin · User Management" subtitle="Approve sign-ups, set licence limits, and reactivate clients by email." />
+      <div className="space-y-6 p-5 sm:p-8">
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+            <Mail className="h-4 w-4" /> Reactivate by email
+          </div>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Approves the portal account (if it exists) and resets every licence issued to this email so the client can open the mobile app one more time.
+          </p>
+          <form
+            onSubmit={(e) => { e.preventDefault(); if (reEmail) reM.mutate(reEmail.trim()); }}
+            className="flex flex-col gap-2 sm:flex-row"
+          >
+            <input
+              type="email"
+              required
+              value={reEmail}
+              onChange={(e) => setReEmail(e.target.value)}
+              placeholder="client@example.com"
+              className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm"
+            />
+            <button
+              type="submit"
+              disabled={reM.isPending}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-60"
+            >
+              {reM.isPending ? "Working..." : "Reactivate"}
+            </button>
+          </form>
+        </div>
         <div className="overflow-x-auto rounded-2xl border border-border bg-card">
           <table className="w-full text-sm">
             <thead className="bg-secondary/50 text-xs uppercase tracking-wider text-muted-foreground">
