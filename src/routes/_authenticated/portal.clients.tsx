@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Download, Search } from "lucide-react";
 import { PageHeader } from "@/components/portal/PageHeader";
-import { listLicenses, updateLicenseStatus, extendLicense } from "@/lib/portal.functions";
+import { listLicenses, updateLicenseStatus, extendLicense, reactivateLicense } from "@/lib/portal.functions";
 
 const licQ = queryOptions({ queryKey: ["licenses"], queryFn: () => listLicenses() });
 
