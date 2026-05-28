@@ -89,17 +89,20 @@ function ClientsPage() {
                 <th className="px-4 py-3 font-semibold">EA</th>
                 <th className="px-4 py-3 font-semibold">Key</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold">Access</th>
                 <th className="px-4 py-3 font-semibold">Expires</th>
                 <th className="px-4 py-3 font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">No clients yet.</td></tr>
+                <tr><td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">No clients yet.</td></tr>
               )}
               {filtered.map((l) => {
                 const s = statusOf(l);
                 const color = s === "active" ? "bg-accent/15 text-accent-foreground" : s === "expired" ? "bg-muted text-muted-foreground" : "bg-destructive/15 text-destructive";
+                const remaining = (l as any).activations_remaining ?? 0;
+                const used = (l as any).activations_used ?? 0;
                 return (
                   <tr key={l.id} className="border-b border-border last:border-0">
                     <td className="px-4 py-3">
@@ -114,9 +117,18 @@ function ClientsPage() {
                         {s}
                       </span>
                     </td>
+                    <td className="px-4 py-3 text-xs">
+                      <span className={`font-semibold ${remaining > 0 ? "text-emerald-600" : "text-amber-600"}`}>
+                        {remaining > 0 ? `${remaining} left` : "needs reactivation"}
+                      </span>
+                      <div className="text-[10px] text-muted-foreground">{used} used</div>
+                    </td>
                     <td className="px-4 py-3 text-muted-foreground">{new Date(l.expires_at).toLocaleDateString()}</td>
                     <td className="px-4 py-3">
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => mReactivate.mutate(l.id)} className="rounded-md bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-500/25">
+                          Reactivate
+                        </button>
                         <button onClick={() => mExtend.mutate(l.id)} className="rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium hover:bg-secondary">Extend</button>
                         {s !== "revoked" && (
                           <button onClick={() => mRevoke.mutate(l.id)} className="rounded-md bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive hover:bg-destructive/20">Revoke</button>
