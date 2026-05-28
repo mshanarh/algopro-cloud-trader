@@ -25,6 +25,7 @@ function ClientsPage() {
   const qc = useQueryClient();
   const updateStatus = useServerFn(updateLicenseStatus);
   const extend = useServerFn(extendLicense);
+  const reactivate = useServerFn(reactivateLicense);
   const [q, setQ] = useState("");
 
   const filtered = useMemo(() => {
@@ -44,6 +45,11 @@ function ClientsPage() {
   const mExtend = useMutation({
     mutationFn: (id: string) => extend({ data: { id, days: 30 } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["licenses"] }); toast.success("Extended by 30 days"); },
+  });
+  const mReactivate = useMutation({
+    mutationFn: (id: string) => reactivate({ data: { id, activations: 1 } }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["licenses"] }); toast.success("Reactivated — client can open the app once"); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
   const exportCsv = () => {
