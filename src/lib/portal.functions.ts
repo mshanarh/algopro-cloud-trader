@@ -104,7 +104,7 @@ export const validateLicense = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row, error } = await supabaseAdmin
       .from("licenses")
-      .select("id, key, username, status, expires_at, plan, ea_id, expert_advisors(name, symbols, image_url)")
+      .select("id, key, username, status, expires_at, plan, ea_id, activations_remaining, activations_used, expert_advisors(name, symbols, image_url)")
       .eq("key", data.key.toUpperCase())
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -113,6 +113,18 @@ export const validateLicense = createServerFn({ method: "POST" })
     if (row.status !== "active" || expired) {
       return { ok: false as const, reason: expired ? "Licence expired" : "Licence revoked" };
     }
+    if ((row.activations_remaining ?? 0) <= 0) {
+      return { ok: false as const, reason: "Activation used. Ask admin to reactivate." };
+    }
+    // Consume one activation
+    await supabaseAdmin
+      .from("licenses")
+      .update({
+        activations_remaining: (row.activations_remaining ?? 1) - 1,
+        activations_used: (row.activations_used ?? 0) + 1,
+        last_activated_at: new Date().toISOString(),
+      })
+      .eq("id", row.id);
     const ea = (row as any).expert_advisors;
     return {
       ok: true as const,
@@ -123,6 +135,22 @@ export const validateLicense = createServerFn({ method: "POST" })
       symbols: (ea?.symbols ?? []) as string[],
       ea_image: (ea?.image_url ?? null) as string | null,
     };
+  });
+
+export const reactivateLicense = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({
+    id: z.string().uuid(),
+    activations: z.number().int().min(1).max(100).default(1),
+  }).parse(input))
+  .handler(async ({ context, data }) => {
+    const { error } = await context.supabase
+      .from("licenses")
+      .update({ activations_remaining: data.activations, status: "active" })
+      .eq("id", data.id)
+      .eq("owner_id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 
