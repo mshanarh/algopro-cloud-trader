@@ -69,19 +69,17 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
 }
 
 function StatusBar() {
-  const [now, setNow] = useState<string>(() =>
-    new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-  );
+  const [now, setNow] = useState<string>("");
   useEffect(() => {
-    const t = setInterval(
-      () => setNow(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })),
-      30_000,
-    );
+    const fmt = () =>
+      setNow(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+    fmt();
+    const t = setInterval(fmt, 30_000);
     return () => clearInterval(t);
   }, []);
   return (
     <div className="flex items-center justify-between px-6 pt-3 text-[11px] font-semibold text-white sm:pt-4">
-      <span className="tabular-nums">{now}</span>
+      <span className="tabular-nums">{now || "\u00a0"}</span>
       <div className="hidden h-7 w-32 rounded-full bg-transparent sm:block" />
       <div className="flex items-center gap-1.5">
         <Signal className="h-3 w-3" />

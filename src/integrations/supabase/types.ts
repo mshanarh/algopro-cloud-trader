@@ -49,36 +49,45 @@ export type Database = {
       }
       licenses: {
         Row: {
+          activations_remaining: number
+          activations_used: number
           client_email: string | null
           created_at: string
           ea_id: string | null
           expires_at: string
           id: string
           key: string
+          last_activated_at: string | null
           owner_id: string
           plan: Database["public"]["Enums"]["license_plan"]
           status: Database["public"]["Enums"]["license_status"]
           username: string
         }
         Insert: {
+          activations_remaining?: number
+          activations_used?: number
           client_email?: string | null
           created_at?: string
           ea_id?: string | null
           expires_at: string
           id?: string
           key: string
+          last_activated_at?: string | null
           owner_id: string
           plan: Database["public"]["Enums"]["license_plan"]
           status?: Database["public"]["Enums"]["license_status"]
           username: string
         }
         Update: {
+          activations_remaining?: number
+          activations_used?: number
           client_email?: string | null
           created_at?: string
           ea_id?: string | null
           expires_at?: string
           id?: string
           key?: string
+          last_activated_at?: string | null
           owner_id?: string
           plan?: Database["public"]["Enums"]["license_plan"]
           status?: Database["public"]["Enums"]["license_status"]
