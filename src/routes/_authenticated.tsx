@@ -18,17 +18,15 @@ export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ context, location }) => {
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/login" });
-    // Approval gate (skip the pending page itself to avoid loop — pending is public)
     if (location.pathname !== "/pending") {
       try {
-        const status = await getMyStatus();
+        const status = await context.queryClient.ensureQueryData(statusQ);
         if (!status.approved) throw redirect({ to: "/pending" });
       } catch (e) {
         if (e && typeof e === "object" && "to" in e) throw e;
         throw redirect({ to: "/pending" });
       }
     }
-    await context.queryClient.ensureQueryData(statusQ);
   },
   component: PortalLayout,
 });
