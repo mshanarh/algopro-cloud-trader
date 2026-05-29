@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { useQuery, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -10,12 +10,16 @@ import { listEAs, createEA } from "@/lib/portal.functions";
 const easQ = queryOptions({ queryKey: ["eas"], queryFn: () => listEAs() });
 
 export const Route = createFileRoute("/_authenticated/portal/eas")({
-  loader: ({ context }) => context.queryClient.ensureQueryData(easQ),
-  component: EAsPage,
+  component: EAsRoute,
 });
 
+function EAsRoute() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  return pathname === "/portal/eas" || pathname === "/portal/eas/" ? <EAsPage /> : <Outlet />;
+}
+
 function EAsPage() {
-  const { data: eas } = useSuspenseQuery(easQ);
+  const { data: eas = [], isLoading } = useQuery(easQ);
   const qc = useQueryClient();
   const create = useServerFn(createEA);
   const [name, setName] = useState("");
@@ -51,7 +55,9 @@ function EAsPage() {
 
         <div className="rounded-2xl border border-border bg-card p-6">
           <h2 className="mb-4 font-semibold">Your Expert Advisors</h2>
-          {eas.length === 0 ? (
+          {isLoading ? (
+            <div className="grid place-items-center py-12 text-center text-sm text-muted-foreground">Loading Expert Advisors...</div>
+          ) : eas.length === 0 ? (
             <div className="grid place-items-center py-12 text-center">
               <Bot className="mb-3 h-10 w-10 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">No EAs yet — add your first on the left.</p>

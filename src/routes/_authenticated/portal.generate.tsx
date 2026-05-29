@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -10,7 +10,6 @@ import { listEAs, createLicense } from "@/lib/portal.functions";
 const easQ = queryOptions({ queryKey: ["eas"], queryFn: () => listEAs() });
 
 export const Route = createFileRoute("/_authenticated/portal/generate")({
-  loader: ({ context }) => context.queryClient.ensureQueryData(easQ),
   component: GeneratePage,
 });
 
@@ -24,7 +23,7 @@ const PLANS = [
 ] as const;
 
 function GeneratePage() {
-  const { data: eas } = useSuspenseQuery(easQ);
+  const { data: eas = [], isLoading: easLoading } = useQuery(easQ);
   const qc = useQueryClient();
   const create = useServerFn(createLicense);
   const [username, setUsername] = useState("");
@@ -72,7 +71,7 @@ function GeneratePage() {
           </Field>
           <Field label="Expert Advisor">
             <select value={eaId} onChange={(e) => setEaId(e.target.value)} className="input">
-              <option value="">— No EA assigned —</option>
+              <option value="">{easLoading ? "Loading EAs..." : "— No EA assigned —"}</option>
               {eas.map((ea) => <option key={ea.id} value={ea.id}>{ea.name}</option>)}
             </select>
           </Field>

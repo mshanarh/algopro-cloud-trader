@@ -7,26 +7,17 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { LayoutDashboard, KeyRound, Bot, Users, Settings, LogOut, Menu, X, ShieldCheck } from "lucide-react";
-import { useState } from "react";
-import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useQuery, queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyStatus } from "@/lib/portal.functions";
 
 const statusQ = queryOptions({ queryKey: ["my-status"], queryFn: () => getMyStatus() });
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: async ({ context, location }) => {
+  beforeLoad: async () => {
     const { data } = await supabase.auth.getSession();
     if (!data.session) throw redirect({ to: "/login" });
-    if (location.pathname !== "/pending") {
-      try {
-        const status = await context.queryClient.ensureQueryData(statusQ);
-        if (!status.approved) throw redirect({ to: "/pending" });
-      } catch (e) {
-        if (e && typeof e === "object" && "to" in e) throw e;
-        throw redirect({ to: "/pending" });
-      }
-    }
   },
   component: PortalLayout,
 });
@@ -43,15 +34,54 @@ function PortalLayout() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
-  const { data: status } = useSuspenseQuery(statusQ);
-  const NAV = status.is_admin
-    ? [...BASE_NAV, { to: "/portal/admin", label: "Admin", icon: ShieldCheck } as const]
-    : BASE_NAV;
+  const { data: status, error, isLoading, refetch } = useQuery({ ...statusQ, retry: false });
+
+  useEffect(() => {
+    if (status && !status.approved) navigate({ to: "/pending", replace: true });
+  }, [navigate, status]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
     navigate({ to: "/login" });
   };
+
+  if (isLoading) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-secondary/30 px-5 text-center">
+        <div>
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-sm font-medium text-muted-foreground">Opening portal...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !status) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-secondary/30 px-5 text-center">
+        <div className="max-w-sm rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <p className="text-base font-semibold text-foreground">Portal did not open</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {error instanceof Error ? error.message : "Please sign in again."}
+          </p>
+          <div className="mt-5 flex justify-center gap-2">
+            <button onClick={() => refetch()} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+              Try again
+            </button>
+            <button onClick={signOut} className="rounded-lg border border-border px-4 py-2 text-sm font-semibold">
+              Sign in
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!status.approved) return null;
+
+  const NAV = status.is_admin
+    ? [...BASE_NAV, { to: "/portal/admin", label: "Admin", icon: ShieldCheck } as const]
+    : BASE_NAV;
 
   return (
     <div className="min-h-screen bg-secondary/30">
