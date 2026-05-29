@@ -46,6 +46,7 @@ function PhoneApp() {
   return (
     <div className="min-h-screen bg-slate-100 px-0 py-0 sm:px-6 sm:py-10 lg:py-14">
       <div className="mx-auto w-full max-w-[420px]">
+        <InstallBanner />
         <PhoneFrame>
           <AppRouter />
         </PhoneFrame>
@@ -53,6 +54,61 @@ function PhoneApp() {
           Algopro mobile preview — runs full-screen on iOS/Android
         </p>
       </div>
+    </div>
+  );
+}
+
+type BIPEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: "accepted" | "dismissed" }> };
+
+function InstallBanner() {
+  const [deferred, setDeferred] = useState<BIPEvent | null>(null);
+  const [installed, setInstalled] = useState(false);
+  const [showIos, setShowIos] = useState(false);
+
+  useEffect(() => {
+    const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone;
+    if (standalone) { setInstalled(true); return; }
+    const onPrompt = (e: Event) => { e.preventDefault(); setDeferred(e as BIPEvent); };
+    const onInstalled = () => { setInstalled(true); setDeferred(null); };
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onPrompt);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+
+  if (installed) return null;
+
+  const isIos = typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  const onInstall = async () => {
+    if (deferred) {
+      await deferred.prompt();
+      const r = await deferred.userChoice;
+      if (r.outcome === "accepted") { setInstalled(true); toast.success("App installed"); }
+      setDeferred(null);
+    } else if (isIos) {
+      setShowIos(true);
+    } else {
+      toast.info("Open the browser menu and tap 'Install app' or 'Add to Home Screen'.");
+    }
+  };
+
+  return (
+    <div className="mb-3 px-4 sm:px-0">
+      <button
+        onClick={onInstall}
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-lg active:scale-[0.98]"
+      >
+        📲 Install Algopro on your phone
+      </button>
+      {showIos && (
+        <div className="mt-2 rounded-lg border border-slate-300 bg-white p-3 text-xs text-slate-700">
+          <b>iPhone:</b> tap the Share button <span className="font-mono">⬆︎</span> in Safari, then choose <b>"Add to Home Screen"</b>.
+          <button onClick={() => setShowIos(false)} className="ml-2 underline">Dismiss</button>
+        </div>
+      )}
     </div>
   );
 }
