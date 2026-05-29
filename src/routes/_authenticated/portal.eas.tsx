@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useQuery, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -10,8 +10,13 @@ import { listEAs, createEA } from "@/lib/portal.functions";
 const easQ = queryOptions({ queryKey: ["eas"], queryFn: () => listEAs() });
 
 export const Route = createFileRoute("/_authenticated/portal/eas")({
-  component: EAsPage,
+  component: EAsRoute,
 });
+
+function EAsRoute() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  return pathname === "/portal/eas" || pathname === "/portal/eas/" ? <EAsPage /> : <Outlet />;
+}
 
 function EAsPage() {
   const { data: eas = [], isLoading } = useQuery(easQ);
