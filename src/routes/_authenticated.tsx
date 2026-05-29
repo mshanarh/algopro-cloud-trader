@@ -40,6 +40,11 @@ function PortalLayout() {
     if (status && !status.approved) navigate({ to: "/pending", replace: true });
   }, [navigate, status]);
 
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    navigate({ to: "/login" });
+  };
+
   if (isLoading) {
     return (
       <div className="grid min-h-screen place-items-center bg-secondary/30 px-5 text-center">
@@ -77,11 +82,6 @@ function PortalLayout() {
   const NAV = status.is_admin
     ? [...BASE_NAV, { to: "/portal/admin", label: "Admin", icon: ShieldCheck } as const]
     : BASE_NAV;
-
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    navigate({ to: "/login" });
-  };
 
   return (
     <div className="min-h-screen bg-secondary/30">
