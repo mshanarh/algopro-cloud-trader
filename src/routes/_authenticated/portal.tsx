@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { useQuery, queryOptions } from "@tanstack/react-query";
 import { getDashboard } from "@/lib/portal.functions";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { CheckCircle2, KeyRound, Bot, Activity } from "lucide-react";
@@ -7,9 +7,13 @@ import { CheckCircle2, KeyRound, Bot, Activity } from "lucide-react";
 const dashQ = queryOptions({ queryKey: ["dashboard"], queryFn: () => getDashboard() });
 
 export const Route = createFileRoute("/_authenticated/portal")({
-  loader: ({ context }) => context.queryClient.ensureQueryData(dashQ),
-  component: Dashboard,
+  component: PortalRoute,
 });
+
+function PortalRoute() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  return pathname === "/portal" || pathname === "/portal/" ? <Dashboard /> : <Outlet />;
+}
 
 function greeting() {
   const h = new Date().getHours();
@@ -19,9 +23,20 @@ function greeting() {
 }
 
 function Dashboard() {
-  const { data } = useSuspenseQuery(dashQ);
+  const { data, isLoading, error } = useQuery(dashQ);
+
+  if (isLoading) {
+    return <PageHeader title="Opening portal..." subtitle="Loading your dashboard once." />;
+  }
+
+  if (error || !data) {
+    return <PageHeader title="Portal needs a refresh" subtitle={error instanceof Error ? error.message : "Please try again."} />;
+  }
+
   const name = data.profile?.display_name || data.profile?.full_name || "Trader";
-  const usedPct = Math.min(100, (data.stats.active / 25) * 100);
+  const isUnlimited = (data.profile?.license_limit ?? 0) >= 9999;
+  const limit = isUnlimited ? 100 : Math.max(data.profile?.license_limit ?? 1, 1);
+  const usedPct = isUnlimited ? 100 : Math.min(100, (data.stats.active / limit) * 100);
 
   return (
     <div>
@@ -68,7 +83,7 @@ function Dashboard() {
           </div>
           <div className="mb-2 flex items-baseline gap-2">
             <span className="text-3xl font-bold">{data.stats.active}</span>
-            <span className="text-sm text-muted-foreground">/ 25 keys</span>
+            <span className="text-sm text-muted-foreground">/ {isUnlimited ? "unlimited" : `${limit} keys`}</span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-secondary">
             <div className="h-full bg-[image:var(--gradient-purple)]" style={{ width: `${usedPct}%` }} />
