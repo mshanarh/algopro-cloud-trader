@@ -55,14 +55,14 @@ function LoginPage() {
           }
         }
         toast.success("Account created — waiting for admin approval");
-        navigate({ to: "/pending" });
+        navigate({ to: "/pending", replace: true });
         return;
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Welcome Master");
       }
-      navigate({ to: "/portal" });
+      navigate({ to: "/portal", replace: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Authentication failed");
     } finally {
