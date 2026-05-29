@@ -16,8 +16,8 @@ const statusQ = queryOptions({ queryKey: ["my-status"], queryFn: () => getMyStat
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ context, location }) => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/login" });
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) throw redirect({ to: "/login" });
     if (location.pathname !== "/pending") {
       try {
         const status = await context.queryClient.ensureQueryData(statusQ);
