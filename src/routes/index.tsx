@@ -272,21 +272,22 @@ function CTA() {
 
 function Footer() {
   return (
-    <footer className="border-t border-border bg-background">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 sm:flex-row">
+    <footer className="bg-[image:var(--gradient-navy)] text-white/70">
+      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 border-t border-white/10 px-5 py-8 sm:flex-row">
         <div className="flex items-center gap-3">
           <Logo />
-          <span className="text-sm text-muted-foreground">© 2026</span>
+          <span className="text-sm text-white/50">© 2026</span>
         </div>
-        <nav className="flex items-center gap-6 text-sm text-muted-foreground">
-          <a href="#" className="hover:text-foreground">Terms</a>
-          <a href="#" className="hover:text-foreground">Privacy</a>
-          <a href="#" className="hover:text-foreground">Contact</a>
+        <nav className="flex items-center gap-6 text-sm">
+          <a href="#" className="hover:text-white">Terms</a>
+          <a href="#" className="hover:text-white">Privacy</a>
+          <a href="#" className="hover:text-white">Contact</a>
         </nav>
       </div>
     </footer>
   );
 }
+
 
 function Landing() {
   return (
