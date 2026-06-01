@@ -179,26 +179,27 @@ function HowItWorks() {
     },
   ];
   return (
-    <section className="bg-background py-20">
+    <section className="bg-[image:var(--gradient-navy)] py-20 text-white">
       <div className="mx-auto max-w-6xl px-5">
         <div className="mb-12 text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">How it works</h2>
-          <p className="mt-3 text-muted-foreground">Three steps from EA file to live trading.</p>
+          <p className="mt-3 text-white/70">Three steps from EA file to live trading.</p>
         </div>
         <div className="grid gap-6 md:grid-cols-3">
           {steps.map((s) => (
             <div
               key={s.n}
-              className="group rounded-2xl border border-border bg-card p-7 transition hover:-translate-y-1 hover:shadow-[var(--shadow-elegant)]"
+              className="group rounded-2xl border border-white/10 bg-white/5 p-7 backdrop-blur transition hover:-translate-y-1 hover:border-accent/40"
             >
               <div className="mb-5 text-sm font-bold text-accent">{s.n}</div>
               <h3 className="mb-2 text-lg font-semibold">{s.title}</h3>
-              <p className="text-sm text-muted-foreground">{s.desc}</p>
+              <p className="text-sm text-white/70">{s.desc}</p>
             </div>
           ))}
         </div>
       </div>
     </section>
+
   );
 }
 
