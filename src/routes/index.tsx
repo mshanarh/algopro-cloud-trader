@@ -141,24 +141,22 @@ function Hero() {
 function TrustBar() {
   const brokers = ["IC Markets", "Exness", "FTMO", "XM", "Pepperstone"];
   return (
-    <section className="border-y border-border bg-secondary/40">
-      <div className="mx-auto flex max-w-6xl flex-col items-center gap-5 px-5 py-8 text-center">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+    <section className="bg-[image:var(--gradient-navy)] text-white/80">
+      <div className="mx-auto flex max-w-6xl flex-col items-center gap-5 px-5 py-10 text-center">
+        <p className="text-xs font-semibold uppercase tracking-widest text-white/60">
           Compatible with all major brokers — 40,000+ supported
         </p>
         <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
           {brokers.map((b) => (
-            <span
-              key={b}
-              className="text-base font-semibold text-foreground/70 sm:text-lg"
-            >
+            <span key={b} className="text-base font-semibold text-white/80 sm:text-lg">
               {b}
             </span>
           ))}
-          <span className="text-sm text-muted-foreground">+ 40,000 others</span>
+          <span className="text-sm text-white/50">+ 40,000 others</span>
         </div>
       </div>
     </section>
+
   );
 }
 
