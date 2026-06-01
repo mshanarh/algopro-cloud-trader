@@ -56,9 +56,10 @@ function PortalLayout() {
   if (status && !status.approved) return null;
 
 
-  const NAV = status.is_admin
+  const NAV = status?.is_admin
     ? [...BASE_NAV, { to: "/portal/admin", label: "Admin", icon: ShieldCheck } as const]
     : BASE_NAV;
+
 
   return (
     <div className="min-h-screen bg-secondary/30">
