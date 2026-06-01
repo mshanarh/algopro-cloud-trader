@@ -251,19 +251,20 @@ function CTA() {
           Launch your white-label EA hosting in minutes. Your traders get a mobile control panel.
         </p>
         <div id="download" className="mt-8 flex flex-wrap justify-center gap-3">
-          <a
-            href="#"
+          <Link
+            to="/login"
             className="inline-flex items-center gap-2 rounded-lg bg-[image:var(--gradient-purple)] px-7 py-3 text-sm font-semibold shadow-[var(--shadow-elegant)] hover:opacity-95"
           >
             Start Now <ArrowRight className="h-4 w-4" />
-          </a>
-          <a
-            href="#"
+          </Link>
+          <Link
+            to="/download"
             className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-7 py-3 text-sm font-semibold backdrop-blur hover:bg-white/10"
           >
             <Smartphone className="h-4 w-4" /> Download Algopro App
-          </a>
+          </Link>
         </div>
+
       </div>
     </section>
   );
