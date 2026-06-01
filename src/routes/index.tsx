@@ -104,11 +104,12 @@ function Hero() {
               Get Started <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              to="/app"
+              to="/download"
               className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white backdrop-blur hover:bg-white/10"
             >
-              <Smartphone className="h-4 w-4" /> <Apple className="h-4 w-4" /> Open Mobile App
+              <Smartphone className="h-4 w-4" /> <Apple className="h-4 w-4" /> Download App
             </Link>
+
           </div>
           <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-xs text-white/70">
             {["24/7 uptime", "Bank-grade encryption", "No phone battery drain"].map((t) => (
