@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PendingRouteImport } from './routes/pending'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as DownloadRouteImport } from './routes/download'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
@@ -30,6 +31,11 @@ const PendingRoute = PendingRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DownloadRoute = DownloadRouteImport.update({
+  id: '/download',
+  path: '/download',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -90,6 +96,7 @@ const AuthenticatedPortalEasEaIdSymbolsRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
+  '/download': typeof DownloadRoute
   '/login': typeof LoginRoute
   '/pending': typeof PendingRoute
   '/portal': typeof AuthenticatedPortalRouteWithChildren
@@ -103,6 +110,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
+  '/download': typeof DownloadRoute
   '/login': typeof LoginRoute
   '/pending': typeof PendingRoute
   '/portal': typeof AuthenticatedPortalRouteWithChildren
@@ -118,6 +126,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/app': typeof AppRoute
+  '/download': typeof DownloadRoute
   '/login': typeof LoginRoute
   '/pending': typeof PendingRoute
   '/_authenticated/portal': typeof AuthenticatedPortalRouteWithChildren
@@ -133,6 +142,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/app'
+    | '/download'
     | '/login'
     | '/pending'
     | '/portal'
@@ -146,6 +156,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/app'
+    | '/download'
     | '/login'
     | '/pending'
     | '/portal'
@@ -160,6 +171,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/app'
+    | '/download'
     | '/login'
     | '/pending'
     | '/_authenticated/portal'
@@ -175,6 +187,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AppRoute: typeof AppRoute
+  DownloadRoute: typeof DownloadRoute
   LoginRoute: typeof LoginRoute
   PendingRoute: typeof PendingRoute
 }
@@ -193,6 +206,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/download': {
+      id: '/download'
+      path: '/download'
+      fullPath: '/download'
+      preLoaderRoute: typeof DownloadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -318,9 +338,20 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AppRoute: AppRoute,
+  DownloadRoute: DownloadRoute,
   LoginRoute: LoginRoute,
   PendingRoute: PendingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
