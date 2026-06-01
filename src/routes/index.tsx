@@ -104,11 +104,12 @@ function Hero() {
               Get Started <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              to="/app"
+              to="/download"
               className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white backdrop-blur hover:bg-white/10"
             >
-              <Smartphone className="h-4 w-4" /> <Apple className="h-4 w-4" /> Open Mobile App
+              <Smartphone className="h-4 w-4" /> <Apple className="h-4 w-4" /> Download App
             </Link>
+
           </div>
           <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-xs text-white/70">
             {["24/7 uptime", "Bank-grade encryption", "No phone battery drain"].map((t) => (
@@ -140,24 +141,22 @@ function Hero() {
 function TrustBar() {
   const brokers = ["IC Markets", "Exness", "FTMO", "XM", "Pepperstone"];
   return (
-    <section className="border-y border-border bg-secondary/40">
-      <div className="mx-auto flex max-w-6xl flex-col items-center gap-5 px-5 py-8 text-center">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+    <section className="bg-[image:var(--gradient-navy)] text-white/80">
+      <div className="mx-auto flex max-w-6xl flex-col items-center gap-5 px-5 py-10 text-center">
+        <p className="text-xs font-semibold uppercase tracking-widest text-white/60">
           Compatible with all major brokers — 40,000+ supported
         </p>
         <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
           {brokers.map((b) => (
-            <span
-              key={b}
-              className="text-base font-semibold text-foreground/70 sm:text-lg"
-            >
+            <span key={b} className="text-base font-semibold text-white/80 sm:text-lg">
               {b}
             </span>
           ))}
-          <span className="text-sm text-muted-foreground">+ 40,000 others</span>
+          <span className="text-sm text-white/50">+ 40,000 others</span>
         </div>
       </div>
     </section>
+
   );
 }
 
@@ -180,26 +179,27 @@ function HowItWorks() {
     },
   ];
   return (
-    <section className="bg-background py-20">
+    <section className="bg-[image:var(--gradient-navy)] py-20 text-white">
       <div className="mx-auto max-w-6xl px-5">
         <div className="mb-12 text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">How it works</h2>
-          <p className="mt-3 text-muted-foreground">Three steps from EA file to live trading.</p>
+          <p className="mt-3 text-white/70">Three steps from EA file to live trading.</p>
         </div>
         <div className="grid gap-6 md:grid-cols-3">
           {steps.map((s) => (
             <div
               key={s.n}
-              className="group rounded-2xl border border-border bg-card p-7 transition hover:-translate-y-1 hover:shadow-[var(--shadow-elegant)]"
+              className="group rounded-2xl border border-white/10 bg-white/5 p-7 backdrop-blur transition hover:-translate-y-1 hover:border-accent/40"
             >
               <div className="mb-5 text-sm font-bold text-accent">{s.n}</div>
               <h3 className="mb-2 text-lg font-semibold">{s.title}</h3>
-              <p className="text-sm text-muted-foreground">{s.desc}</p>
+              <p className="text-sm text-white/70">{s.desc}</p>
             </div>
           ))}
         </div>
       </div>
     </section>
+
   );
 }
 
@@ -213,24 +213,25 @@ function Features() {
     { icon: ShieldCheck, title: "Secure MT4/MT5", desc: "Encrypted credentials. Works with any broker." },
   ];
   return (
-    <section id="features" className="bg-secondary/40 py-20">
+    <section id="features" className="bg-[image:var(--gradient-navy)] py-20 text-white">
       <div className="mx-auto max-w-6xl px-5">
         <div className="mb-12 text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Everything you need to run a Forex bot business</h2>
         </div>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((it) => (
-            <div key={it.title} className="rounded-2xl border border-border bg-card p-6 transition hover:border-accent/50">
+            <div key={it.title} className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur transition hover:border-accent/50">
               <div className="mb-4 grid h-11 w-11 place-items-center rounded-xl bg-accent/15 text-accent">
                 <it.icon className="h-5 w-5" />
               </div>
               <h3 className="mb-1.5 font-semibold">{it.title}</h3>
-              <p className="text-sm text-muted-foreground">{it.desc}</p>
+              <p className="text-sm text-white/70">{it.desc}</p>
             </div>
           ))}
         </div>
       </div>
     </section>
+
   );
 }
 
@@ -250,19 +251,20 @@ function CTA() {
           Launch your white-label EA hosting in minutes. Your traders get a mobile control panel.
         </p>
         <div id="download" className="mt-8 flex flex-wrap justify-center gap-3">
-          <a
-            href="#"
+          <Link
+            to="/login"
             className="inline-flex items-center gap-2 rounded-lg bg-[image:var(--gradient-purple)] px-7 py-3 text-sm font-semibold shadow-[var(--shadow-elegant)] hover:opacity-95"
           >
             Start Now <ArrowRight className="h-4 w-4" />
-          </a>
-          <a
-            href="#"
+          </Link>
+          <Link
+            to="/download"
             className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-7 py-3 text-sm font-semibold backdrop-blur hover:bg-white/10"
           >
             <Smartphone className="h-4 w-4" /> Download Algopro App
-          </a>
+          </Link>
         </div>
+
       </div>
     </section>
   );
@@ -270,21 +272,22 @@ function CTA() {
 
 function Footer() {
   return (
-    <footer className="border-t border-border bg-background">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 sm:flex-row">
+    <footer className="bg-[image:var(--gradient-navy)] text-white/70">
+      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 border-t border-white/10 px-5 py-8 sm:flex-row">
         <div className="flex items-center gap-3">
           <Logo />
-          <span className="text-sm text-muted-foreground">© 2026</span>
+          <span className="text-sm text-white/50">© 2026</span>
         </div>
-        <nav className="flex items-center gap-6 text-sm text-muted-foreground">
-          <a href="#" className="hover:text-foreground">Terms</a>
-          <a href="#" className="hover:text-foreground">Privacy</a>
-          <a href="#" className="hover:text-foreground">Contact</a>
+        <nav className="flex items-center gap-6 text-sm">
+          <a href="#" className="hover:text-white">Terms</a>
+          <a href="#" className="hover:text-white">Privacy</a>
+          <a href="#" className="hover:text-white">Contact</a>
         </nav>
       </div>
     </footer>
   );
 }
+
 
 function Landing() {
   return (
