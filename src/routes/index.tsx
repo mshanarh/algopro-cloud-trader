@@ -213,24 +213,25 @@ function Features() {
     { icon: ShieldCheck, title: "Secure MT4/MT5", desc: "Encrypted credentials. Works with any broker." },
   ];
   return (
-    <section id="features" className="bg-secondary/40 py-20">
+    <section id="features" className="bg-[image:var(--gradient-navy)] py-20 text-white">
       <div className="mx-auto max-w-6xl px-5">
         <div className="mb-12 text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Everything you need to run a Forex bot business</h2>
         </div>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((it) => (
-            <div key={it.title} className="rounded-2xl border border-border bg-card p-6 transition hover:border-accent/50">
+            <div key={it.title} className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur transition hover:border-accent/50">
               <div className="mb-4 grid h-11 w-11 place-items-center rounded-xl bg-accent/15 text-accent">
                 <it.icon className="h-5 w-5" />
               </div>
               <h3 className="mb-1.5 font-semibold">{it.title}</h3>
-              <p className="text-sm text-muted-foreground">{it.desc}</p>
+              <p className="text-sm text-white/70">{it.desc}</p>
             </div>
           ))}
         </div>
       </div>
     </section>
+
   );
 }
 
