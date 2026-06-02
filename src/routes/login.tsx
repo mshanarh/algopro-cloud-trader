@@ -6,15 +6,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 
 export const Route = createFileRoute("/login")({
-  beforeLoad: async () => {
+  validateSearch: (search) => ({
+    redirect: typeof search.redirect === "string" && search.redirect.startsWith("/") ? search.redirect : "/portal",
+  }),
+  beforeLoad: async ({ search }) => {
     const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/portal" });
+    if (data.session) throw redirect({ to: search.redirect });
   },
   component: LoginPage,
   head: () => ({ meta: [{ title: "Sign in — Algopro Portal" }] }),
 });
 
 function LoginPage() {
+  const search = Route.useSearch();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -62,7 +66,7 @@ function LoginPage() {
         if (error) throw error;
         toast.success("Welcome Master");
       }
-      navigate({ to: "/portal", replace: true });
+      navigate({ to: search.redirect || "/portal", replace: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Authentication failed");
     } finally {
