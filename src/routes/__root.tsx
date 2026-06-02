@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
@@ -102,10 +102,23 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function AuthSync() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const lastUserId = useRef<string | null | undefined>(undefined);
+
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const nextUserId = session?.user?.id ?? null;
+      if (event === "INITIAL_SESSION") {
+        lastUserId.current = nextUserId;
+        return;
+      }
+      if (lastUserId.current === nextUserId && event !== "SIGNED_OUT") return;
+
+      lastUserId.current = nextUserId;
       router.invalidate();
-      queryClient.invalidateQueries();
+      queryClient.invalidateQueries({ queryKey: ["my-status"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["eas"] });
+      queryClient.invalidateQueries({ queryKey: ["licenses"] });
     });
     return () => subscription.unsubscribe();
   }, [router, queryClient]);
