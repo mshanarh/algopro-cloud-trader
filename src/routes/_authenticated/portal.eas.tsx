@@ -46,8 +46,33 @@ function EAsPage() {
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="EA Name (e.g. Ultra Space Prime)" maxLength={100} required className="input" />
           <textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Description" rows={3} maxLength={500} className="input" />
           <input value={file} onChange={(e) => setFile(e.target.value)} placeholder="File URL (.ex5 / .ex4)" maxLength={500} className="input" />
-          <input value={image} onChange={(e) => setImage(e.target.value)} placeholder="Image URL (shown in mobile app)" maxLength={500} className="input" />
-          {image && <img src={image} alt="preview" className="h-24 w-24 rounded-lg object-cover" />}
+
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground">EA Image (shown in mobile app)</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                if (!f.type.startsWith("image/")) { toast.error("Pick an image file"); return; }
+                try {
+                  const dataUrl = await compressImage(f, 600, 0.82);
+                  setImage(dataUrl);
+                } catch (err) {
+                  toast.error("Couldn't read image");
+                }
+              }}
+              className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-2 file:text-xs file:font-semibold file:text-accent-foreground"
+            />
+            {image && (
+              <div className="flex items-center gap-3">
+                <img src={image} alt="preview" className="h-20 w-20 rounded-lg object-cover ring-1 ring-border" />
+                <button type="button" onClick={() => setImage("")} className="text-xs text-muted-foreground hover:text-foreground underline">Remove</button>
+              </div>
+            )}
+          </div>
+
           <button type="submit" disabled={m.isPending} className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground hover:opacity-90 disabled:opacity-50">
             <Plus className="h-4 w-4" /> Add Expert Advisor
           </button>
