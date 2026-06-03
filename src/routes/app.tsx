@@ -313,118 +313,146 @@ function LicenseGate({ mentor, onSuccess, onSignOut }: { mentor: Mentor; onSucce
 }
 
 function HomeScreen({ session }: { session: Session }) {
-  const [running, setRunning] = useState(false);
-  const [logs, setLogs] = useState<string[]>([
-    "[ OK ] Cloud VPS connected",
-    "[ OK ] MT5 bridge online",
-  ]);
-  const consoleRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!running) return;
-    const symbols = session.symbols.length ? session.symbols : ["EURUSD"];
-    const t = setInterval(() => {
-      const sym = symbols[Math.floor(Math.random() * symbols.length)];
-      const side = Math.random() > 0.5 ? "BUY" : "SELL";
-      setLogs((p) => [...p.slice(-40), `[ TRADE ] ${sym} ${side} 0.0${Math.ceil(Math.random()*9)}`]);
-    }, 2200);
-    return () => clearInterval(t);
-  }, [running, session.symbols]);
-
-  useEffect(() => {
-    consoleRef.current?.scrollTo({ top: consoleRef.current.scrollHeight, behavior: "smooth" });
-  }, [logs]);
+  const [running, setRunning] = useState(true);
 
   const toggle = () => {
     setRunning((r) => {
       const next = !r;
-      if (next) {
-        toast.success("Bot activated");
-        console.log("Bot activated", { ea: session.ea_name, symbols: session.symbols });
-        setLogs((p) => [...p, `[ BOT  ] ${session.ea_name} started`]);
-      } else {
-        toast.info("Bot stopped");
-        setLogs((p) => [...p, `[ BOT  ] ${session.ea_name} stopped`]);
-      }
+      toast[next ? "success" : "info"](next ? "Bot activated" : "Bot stopped");
       return next;
     });
   };
 
+  const onDelete = () => toast.info("Open Settings → Sign out to remove the licence");
+  const onSymbols = () => toast.message("Symbols", { description: session.symbols.join(", ") || "None" });
+
   return (
-    <div className="px-5 pt-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs text-white/50">Welcome Master</p>
-          <h1 className="text-xl font-bold tracking-tight">{session.username}</h1>
-        </div>
-        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${running ? "bg-emerald-500/15 text-emerald-300" : "bg-white/10 text-white/60"}`}>
-          <span className={`h-1.5 w-1.5 rounded-full ${running ? "bg-emerald-400 animate-pulse" : "bg-white/40"}`} />
-          {running ? "LIVE" : "IDLE"}
-        </span>
-      </div>
+    <div className="relative flex flex-col items-center px-5 pt-6 pb-10 text-center">
+      {/* Glow background */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(56,135,255,0.25),transparent_55%)]" />
 
-      <div className="mt-5 rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-5">
-        {session.ea_image && (
-          <img src={session.ea_image} alt={session.ea_name} className="mb-4 h-32 w-full rounded-2xl object-cover" />
-        )}
-        <div className="flex items-center gap-3">
-          <div className={`grid h-12 w-12 place-items-center rounded-2xl ${running ? "bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/40" : "bg-white/10"}`}>
-            <Bot className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <p className="text-[11px] uppercase tracking-wider text-white/40">Expert Advisor</p>
-            <h2 className="text-base font-semibold">{session.ea_name}</h2>
-          </div>
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-1.5">
-          {session.symbols.length === 0 ? (
-            <span className="text-xs text-white/40">No symbols configured</span>
+      {/* Circular EA portrait */}
+      <div className="relative mt-2">
+        <div className="absolute -inset-3 rounded-full bg-cyan-500/20 blur-2xl" />
+        <div className="relative h-56 w-56 overflow-hidden rounded-full ring-2 ring-cyan-400/40 shadow-[0_0_60px_-10px_rgba(34,211,238,0.6)]">
+          {session.ea_image ? (
+            <img src={session.ea_image} alt={session.ea_name} className="h-full w-full object-cover" />
           ) : (
-            session.symbols.map((s) => (
-              <span key={s} className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium">
-                {s}
-              </span>
-            ))
+            <div className="grid h-full w-full place-items-center bg-gradient-to-br from-cyan-500/30 to-blue-700/30">
+              <Bot className="h-20 w-20 text-cyan-300" />
+            </div>
           )}
         </div>
+        {/* LIVE badge */}
+        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2">
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold ${running ? "bg-black text-white ring-1 ring-emerald-400/40" : "bg-black text-white/60 ring-1 ring-white/10"}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${running ? "bg-emerald-400 animate-pulse" : "bg-white/30"}`} />
+            {running ? "LIVE" : "IDLE"}
+          </span>
+        </div>
+      </div>
 
+      {/* Title */}
+      <p className="mt-10 text-[11px] tracking-[0.25em] text-white/50">YOU'RE TRADING WITH</p>
+      <h1 className="mt-1 text-3xl font-extrabold uppercase tracking-tight leading-tight">
+        {session.ea_name}
+      </h1>
+
+      {/* Powered by pill */}
+      <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-black/70 px-4 py-1.5 ring-1 ring-white/10">
+        <Flame className="h-3.5 w-3.5 text-orange-400" />
+        <span className="text-[11px] text-white/60">Powered By</span>
+        <span className="text-[11px] font-bold tracking-wider">{session.username?.toUpperCase() || "EA BLAZE"}</span>
+      </div>
+
+      {/* Control pill */}
+      <div className="relative mt-8 flex w-full max-w-[320px] items-center justify-around rounded-full bg-white py-3 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)]">
+        <PillBtn icon={<Trash2 className="h-5 w-5" />} label="DELETE" onClick={onDelete} />
         <button
           onClick={toggle}
-          className={`mt-5 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold transition ${
-            running
-              ? "bg-gradient-to-r from-rose-500 to-red-600 shadow-lg shadow-rose-500/30"
-              : "bg-gradient-to-r from-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/30"
+          className={`grid h-14 w-14 place-items-center rounded-full text-white shadow-lg transition active:scale-95 ${
+            running ? "bg-red-600 shadow-red-500/50" : "bg-emerald-500 shadow-emerald-500/50"
           }`}
         >
-          {running ? <><Square className="h-4 w-4" /> STOP BOT</> : <><Play className="h-4 w-4" /> START BOT</>}
+          {running ? <Square className="h-5 w-5 fill-white" /> : <Play className="h-5 w-5 fill-white" />}
         </button>
+        <PillBtn icon={<BarChart3 className="h-5 w-5" />} label="SYMBOLS" onClick={onSymbols} />
       </div>
+      <p className="mt-2 text-[10px] uppercase tracking-[0.3em] text-white/30">
+        {running ? "STOP" : "START"}
+      </p>
 
-      <div className="mt-5 rounded-2xl border border-white/10 bg-black/50 p-3">
-        <div className="mb-2 flex items-center gap-2 px-1 text-[11px] uppercase tracking-wider text-white/50">
-          <Activity className="h-3 w-3" /> Live Console
-        </div>
-        <div ref={consoleRef} className="h-40 space-y-0.5 overflow-y-auto px-1 font-mono text-[11px] leading-relaxed text-emerald-300">
-          {logs.map((l, i) => <div key={i}>{l}</div>)}
-        </div>
-      </div>
+      <p className="mt-10 text-[10px] tracking-[0.35em] text-white/30">
+        POWERED BY {session.username?.toUpperCase() || "EA BLAZE"}
+      </p>
+    </div>
+  );
+}
 
-      <div className="mt-5 mb-2 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-white/60">Licence</span>
-          <span className="font-mono text-xs">{session.key.slice(0, 14)}…</span>
-        </div>
-        <div className="mt-2 flex items-center justify-between text-sm">
-          <span className="text-white/60">Expires</span>
-          <span className="font-medium">{new Date(session.expires_at).toLocaleDateString()}</span>
-        </div>
+function PillBtn({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="flex flex-col items-center gap-1 text-slate-900">
+      <span className="grid h-10 w-10 place-items-center rounded-full bg-slate-900 text-white">
+        {icon}
+      </span>
+      <span className="text-[9px] font-bold tracking-wider">{label}</span>
+    </button>
+  );
+}
+
+function SymbolsScreen({ session }: { session: Session }) {
+  return (
+    <div className="px-5 pt-5">
+      <h1 className="text-xl font-bold">Symbols</h1>
+      <p className="text-xs text-white/50">Pairs this EA trades on your account</p>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        {(session.symbols.length ? session.symbols : ["EURUSD", "XAUUSD", "GBPUSD", "BTCUSD"]).map((s) => (
+          <div key={s} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+            <div className="flex items-center gap-2">
+              <LineChart className="h-4 w-4 text-cyan-300" />
+              <span className="font-semibold">{s}</span>
+            </div>
+            <p className="mt-2 text-[10px] uppercase tracking-wider text-emerald-300">Active</p>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-function TradesScreen({ session }: { session: Session }) {
+function MetaTraderScreen() {
+  return (
+    <div className="px-5 pt-5">
+      <h1 className="text-xl font-bold">MetaTrader</h1>
+      <p className="text-xs text-white/50">Bridge status to your broker</p>
+
+      <div className="mt-4 rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-500/10 to-blue-700/10 p-5">
+        <div className="flex items-center gap-3">
+          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-500/20 ring-1 ring-emerald-400/30">
+            <Database className="h-6 w-6 text-emerald-300" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold">MT5 Bridge</p>
+            <p className="text-[11px] text-emerald-300">CONNECTED · VPS LON-04</p>
+          </div>
+        </div>
+        <div className="mt-4 space-y-2 text-sm">
+          <Row label="Broker" value="Exness-Real" />
+          <Row label="Account" value="•••• 4821" />
+          <Row label="Balance" value="$ 2,418.55" />
+          <Row label="Equity" value="$ 2,471.10" />
+          <Row label="Leverage" value="1:500" />
+        </div>
+      </div>
+
+      <p className="mt-4 text-[11px] text-white/40">
+        Live execution is performed by the EA on your VPS. Link a broker from the portal.
+      </p>
+    </div>
+  );
+}
+
+function ScannerScreen({ session }: { session: Session }) {
   const [trades, setTrades] = useState<Trade[]>([]);
   const idRef = useRef(1);
 
@@ -435,26 +463,26 @@ function TradesScreen({ session }: { session: Session }) {
       const side: "BUY" | "SELL" = Math.random() > 0.5 ? "BUY" : "SELL";
       const pnl = +(Math.random() * 80 - 30).toFixed(2);
       setTrades((p) => [{
-        id: idRef.current++,
-        symbol: sym,
-        side,
+        id: idRef.current++, symbol: sym, side,
         lot: +(Math.random() * 0.5 + 0.01).toFixed(2),
         price: +(1 + Math.random() * 2000).toFixed(2),
-        pnl,
-        at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+        pnl, at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
       }, ...p].slice(0, 50));
     }, 1800);
     return () => clearInterval(t);
   }, [session.symbols]);
 
-  const total = trades.reduce((sum, t) => sum + t.pnl, 0);
+  const total = trades.reduce((s, t) => s + t.pnl, 0);
 
   return (
-    <div className="px-5 pt-4">
-      <h1 className="text-xl font-bold">Live Trades</h1>
-      <p className="text-xs text-white/50">Streaming from MT5 bridge</p>
+    <div className="px-5 pt-5">
+      <div className="flex items-center gap-2">
+        <Target className="h-5 w-5 text-cyan-300" />
+        <h1 className="text-xl font-bold">Market Scanner</h1>
+      </div>
+      <p className="text-xs text-white/50">Live trades executed by your EA</p>
 
-      <div className="mt-4 rounded-2xl bg-gradient-to-br from-violet-500/15 to-fuchsia-500/10 p-5 ring-1 ring-violet-400/20">
+      <div className="mt-4 rounded-2xl bg-gradient-to-br from-cyan-500/15 to-blue-700/10 p-5 ring-1 ring-cyan-400/20">
         <p className="text-[11px] uppercase tracking-wider text-white/60">Session P&amp;L</p>
         <p className={`mt-1 text-3xl font-bold tabular-nums ${total >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
           {total >= 0 ? "+" : ""}{total.toFixed(2)} <span className="text-base text-white/50">USD</span>
@@ -462,9 +490,7 @@ function TradesScreen({ session }: { session: Session }) {
       </div>
 
       <div className="mt-4 space-y-2">
-        {trades.length === 0 && (
-          <p className="py-10 text-center text-sm text-white/40">Waiting for first trade…</p>
-        )}
+        {trades.length === 0 && <p className="py-10 text-center text-sm text-white/40">Waiting for first trade…</p>}
         {trades.map((t) => (
           <div key={t.id} className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.03] p-3">
             <div className={`grid h-9 w-9 place-items-center rounded-lg ${t.side === "BUY" ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300"}`}>
