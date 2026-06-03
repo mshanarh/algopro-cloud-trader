@@ -150,7 +150,7 @@ function StatusBar() {
 function AppRouter() {
   const [mentor, setMentor] = useState<Mentor | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [tab, setTab] = useState<"home" | "trades" | "settings" | "help">("home");
+  const [tab, setTab] = useState<"home" | "symbols" | "metatrader" | "scanner" | "settings" | "help">("home");
 
   useEffect(() => {
     try {
