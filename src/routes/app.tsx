@@ -175,13 +175,15 @@ function AppRouter() {
   };
 
   return (
-    <div className="flex h-full flex-col bg-[#0b1020] text-white">
+    <div className="flex h-full flex-col bg-[#06080f] text-white">
       <StatusBar />
       <div className="flex-1 overflow-y-auto pb-24">
         {!mentor && <MentorGate onSuccess={onMentor} />}
         {mentor && !session && <LicenseGate mentor={mentor} onSuccess={onLogin} onSignOut={onSignOutAll} />}
         {mentor && session && tab === "home" && <HomeScreen session={session} />}
-        {mentor && session && tab === "trades" && <TradesScreen session={session} />}
+        {mentor && session && tab === "symbols" && <SymbolsScreen session={session} />}
+        {mentor && session && tab === "metatrader" && <MetaTraderScreen />}
+        {mentor && session && tab === "scanner" && <ScannerScreen session={session} />}
         {mentor && session && tab === "settings" && <SettingsScreen session={session} onLogout={onLogout} />}
         {mentor && session && tab === "help" && <HelpScreen />}
       </div>
