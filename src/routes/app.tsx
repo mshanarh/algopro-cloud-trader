@@ -576,17 +576,21 @@ function HelpScreen() {
   );
 }
 
+type TabId = "home" | "symbols" | "metatrader" | "scanner" | "settings" | "help";
+
 function BottomNav({
   tab, setTab,
-}: { tab: string; setTab: (t: "home" | "trades" | "settings" | "help") => void }) {
-  const items = [
-    { id: "home" as const, icon: Home, label: "Home" },
-    { id: "trades" as const, icon: Activity, label: "Trades" },
-    { id: "settings" as const, icon: SettingsIcon, label: "Settings" },
-    { id: "help" as const, icon: HelpCircle, label: "Help" },
+}: { tab: string; setTab: (t: TabId) => void }) {
+  const items: { id: TabId; icon: typeof Home; label: string }[] = [
+    { id: "home", icon: Home, label: "Home" },
+    { id: "symbols", icon: LineChart, label: "Symbols" },
+    { id: "metatrader", icon: Database, label: "MetaTrader" },
+    { id: "scanner", icon: Target, label: "Scanner" },
+    { id: "settings", icon: SettingsIcon, label: "Settings" },
+    { id: "help", icon: HelpCircle, label: "Help" },
   ];
   return (
-    <nav className="absolute inset-x-0 bottom-0 border-t border-white/10 bg-[#0b1020]/95 px-2 pb-5 pt-2 backdrop-blur">
+    <nav className="absolute inset-x-0 bottom-0 border-t border-white/10 bg-[#06080f]/95 px-1 pb-5 pt-2 backdrop-blur">
       <div className="flex items-center justify-around">
         {items.map(({ id, icon: Icon, label }) => {
           const active = tab === id;
@@ -594,8 +598,8 @@ function BottomNav({
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[10px] transition ${
-                active ? "text-violet-300" : "text-white/50"
+              className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[9px] transition ${
+                active ? "text-cyan-300" : "text-white/50"
               }`}
             >
               <Icon className="h-5 w-5" />
