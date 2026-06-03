@@ -4,8 +4,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
   Bot, Play, Square, KeyRound, Home, Settings as SettingsIcon,
-  HelpCircle, Activity, Wifi, Battery, Signal,
+  HelpCircle, Activity, Wifi, Battery, Signal, Flame,
   TrendingUp, TrendingDown, LogOut, Cpu, MemoryStick, ShieldCheck,
+  LineChart, Database, Target, Trash2, BarChart3,
 } from "lucide-react";
 import { validateLicense, validateMentor } from "@/lib/portal.functions";
 
