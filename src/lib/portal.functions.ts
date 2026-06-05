@@ -50,6 +50,18 @@ export const createEA = createServerFn({ method: "POST" })
     return row;
   });
 
+export const deleteEA = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({
+    id: z.string().uuid(),
+  }).parse(input))
+  .handler(async ({ context, data }) => {
+    const { error } = await context.supabase
+      .from("expert_advisors").delete().eq("id", data.id).eq("owner_id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const validateMentor = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({
     email: z.string().trim().email().max(255),
