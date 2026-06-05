@@ -41,7 +41,7 @@ export const createEA = createServerFn({ method: "POST" })
     name: z.string().trim().min(1).max(100),
     description: z.string().trim().max(500).optional(),
     file_url: z.string().trim().max(500).optional(),
-    image_url: z.string().trim().max(500).optional(),
+    image_url: z.string().trim().max(15_000_000).optional(),
   }).parse(input))
   .handler(async ({ context, data }) => {
     const { error, data: row } = await context.supabase
