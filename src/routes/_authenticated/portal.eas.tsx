@@ -3,9 +3,9 @@ import { useQuery, queryOptions, useMutation, useQueryClient } from "@tanstack/r
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Bot, Plus } from "lucide-react";
+import { Bot, Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/portal/PageHeader";
-import { listEAs, createEA } from "@/lib/portal.functions";
+import { listEAs, createEA, deleteEA } from "@/lib/portal.functions";
 
 const easQ = queryOptions({ queryKey: ["eas"], queryFn: () => listEAs() });
 
