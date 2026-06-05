@@ -312,7 +312,7 @@ function LicenseGate({ mentor, onSuccess, onSignOut }: { mentor: Mentor; onSucce
   );
 }
 
-function HomeScreen({ session }: { session: Session }) {
+function HomeScreen({ session, onDelete }: { session: Session; onDelete: () => void }) {
   const [running, setRunning] = useState(true);
 
   const toggle = () => {
@@ -323,7 +323,11 @@ function HomeScreen({ session }: { session: Session }) {
     });
   };
 
-  const onDelete = () => toast.info("Open Settings → Sign out to remove the licence");
+  const handleDelete = () => {
+    if (!confirm("Delete this licence from the app? You'll need to enter the key again to use it.")) return;
+    onDelete();
+    toast.success("Licence removed");
+  };
   const onSymbols = () => toast.message("Symbols", { description: session.symbols.join(", ") || "None" });
 
   return (
