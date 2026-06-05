@@ -371,7 +371,7 @@ function HomeScreen({ session, onDelete }: { session: Session; onDelete: () => v
 
       {/* Control pill */}
       <div className="relative mt-8 flex w-full max-w-[320px] items-center justify-around rounded-full bg-white py-3 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)]">
-        <PillBtn icon={<Trash2 className="h-5 w-5" />} label="DELETE" onClick={onDelete} />
+        <PillBtn icon={<Trash2 className="h-5 w-5" />} label="DELETE" onClick={handleDelete} />
         <button
           onClick={toggle}
           className={`grid h-14 w-14 place-items-center rounded-full text-white shadow-lg transition active:scale-95 ${
