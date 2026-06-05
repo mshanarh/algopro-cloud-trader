@@ -140,9 +140,24 @@ function EAsPage() {
                       <td className="py-3 pr-3 text-muted-foreground">{(ea.symbols ?? []).length}</td>
                       <td className="py-3 pr-3 text-muted-foreground">{new Date(ea.created_at).toLocaleDateString()}</td>
                       <td className="py-3 text-right">
-                        <Link to="/portal/eas/$eaId/symbols" params={{ eaId: ea.id }} className="text-sm font-medium text-primary hover:underline">
-                          Manage symbols
-                        </Link>
+                        <div className="flex items-center justify-end gap-3">
+                          <Link to="/portal/eas/$eaId/symbols" params={{ eaId: ea.id }} className="text-sm font-medium text-primary hover:underline">
+                            Manage symbols
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm(`Delete "${ea.name}"? This cannot be undone.`)) {
+                                delM.mutate(ea.id);
+                              }
+                            }}
+                            disabled={delM.isPending}
+                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                            title="Delete EA"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
