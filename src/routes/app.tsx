@@ -180,7 +180,7 @@ function AppRouter() {
       <div className="flex-1 overflow-y-auto pb-24">
         {!mentor && <MentorGate onSuccess={onMentor} />}
         {mentor && !session && <LicenseGate mentor={mentor} onSuccess={onLogin} onSignOut={onSignOutAll} />}
-        {mentor && session && tab === "home" && <HomeScreen session={session} />}
+        {mentor && session && tab === "home" && <HomeScreen session={session} onDelete={onLogout} />}
         {mentor && session && tab === "symbols" && <SymbolsScreen session={session} />}
         {mentor && session && tab === "metatrader" && <MetaTraderScreen />}
         {mentor && session && tab === "scanner" && <ScannerScreen session={session} />}
