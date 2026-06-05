@@ -180,7 +180,7 @@ function AppRouter() {
       <div className="flex-1 overflow-y-auto pb-24">
         {!mentor && <MentorGate onSuccess={onMentor} />}
         {mentor && !session && <LicenseGate mentor={mentor} onSuccess={onLogin} onSignOut={onSignOutAll} />}
-        {mentor && session && tab === "home" && <HomeScreen session={session} />}
+        {mentor && session && tab === "home" && <HomeScreen session={session} onDelete={onLogout} />}
         {mentor && session && tab === "symbols" && <SymbolsScreen session={session} />}
         {mentor && session && tab === "metatrader" && <MetaTraderScreen />}
         {mentor && session && tab === "scanner" && <ScannerScreen session={session} />}
@@ -312,7 +312,7 @@ function LicenseGate({ mentor, onSuccess, onSignOut }: { mentor: Mentor; onSucce
   );
 }
 
-function HomeScreen({ session }: { session: Session }) {
+function HomeScreen({ session, onDelete }: { session: Session; onDelete: () => void }) {
   const [running, setRunning] = useState(true);
 
   const toggle = () => {
@@ -323,7 +323,11 @@ function HomeScreen({ session }: { session: Session }) {
     });
   };
 
-  const onDelete = () => toast.info("Open Settings → Sign out to remove the licence");
+  const handleDelete = () => {
+    if (!confirm("Delete this licence from the app? You'll need to enter the key again to use it.")) return;
+    onDelete();
+    toast.success("Licence removed");
+  };
   const onSymbols = () => toast.message("Symbols", { description: session.symbols.join(", ") || "None" });
 
   return (
@@ -367,7 +371,7 @@ function HomeScreen({ session }: { session: Session }) {
 
       {/* Control pill */}
       <div className="relative mt-8 flex w-full max-w-[320px] items-center justify-around rounded-full bg-white py-3 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)]">
-        <PillBtn icon={<Trash2 className="h-5 w-5" />} label="DELETE" onClick={onDelete} />
+        <PillBtn icon={<Trash2 className="h-5 w-5" />} label="DELETE" onClick={handleDelete} />
         <button
           onClick={toggle}
           className={`grid h-14 w-14 place-items-center rounded-full text-white shadow-lg transition active:scale-95 ${

@@ -80,6 +80,7 @@ function EAsPage() {
                 const f = e.target.files?.[0];
                 if (!f) return;
                 if (!f.type.startsWith("image/")) { toast.error("Pick an image file"); return; }
+                if (f.size > 10 * 1024 * 1024) { toast.error("Image too large (max 10MB)"); return; }
                 try {
                   const dataUrl = await compressImage(f, 600, 0.82);
                   setImage(dataUrl);
