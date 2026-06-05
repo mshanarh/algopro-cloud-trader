@@ -46,6 +46,7 @@ function EAsPage() {
   const { data: eas = [], isLoading } = useQuery(easQ);
   const qc = useQueryClient();
   const create = useServerFn(createEA);
+  const del = useServerFn(deleteEA);
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
   const [file, setFile] = useState("");
@@ -59,6 +60,15 @@ function EAsPage() {
       toast.success("EA added");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
+  const delM = useMutation({
+    mutationFn: (id: string) => del({ data: { id } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["eas"] });
+      toast.success("EA deleted");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to delete"),
   });
 
   return (
