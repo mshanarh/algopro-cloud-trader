@@ -669,68 +669,152 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function ScannerScreen({ session }: { session: Session }) {
-  const [trades, setTrades] = useState<Trade[]>([]);
+type ChatMsg =
+  | { id: number; role: "user"; image: string; note: string }
+  | { id: number; role: "bot"; text: string; analysis?: AnalysisResult };
+
+type AnalysisResult = {
+  symbol: string;
+  side: "BUY" | "SELL" | "NEUTRAL";
+  confidence: number;
+  entry?: string;
+  sl?: string;
+  tp?: string;
+  reason?: string;
+};
+
+function ScannerScreen({ session: _session }: { session: Session }) {
+  const analyze = useServerFn(analyzeChart);
+  const [msgs, setMsgs] = useState<ChatMsg[]>([
+    { id: 0, role: "bot", text: "Upload a chart screenshot and I'll tell you BUY or SELL." },
+  ]);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
   const idRef = useRef(1);
+  const broker = useMemo<Broker | null>(() => {
+    try { const r = localStorage.getItem(BROKER_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
+  }, []);
 
-  useEffect(() => {
-    const symbols = session.symbols.length ? session.symbols : ["EURUSD", "XAUUSD"];
-    const t = setInterval(() => {
-      const sym = symbols[Math.floor(Math.random() * symbols.length)];
-      const side: "BUY" | "SELL" = Math.random() > 0.5 ? "BUY" : "SELL";
-      const pnl = +(Math.random() * 80 - 30).toFixed(2);
-      setTrades((p) => [{
-        id: idRef.current++, symbol: sym, side,
-        lot: +(Math.random() * 0.5 + 0.01).toFixed(2),
-        price: +(1 + Math.random() * 2000).toFixed(2),
-        pnl, at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-      }, ...p].slice(0, 50));
-    }, 1800);
-    return () => clearInterval(t);
-  }, [session.symbols]);
+  const onPick = async (f: File) => {
+    if (!f.type.startsWith("image/")) { toast.error("Pick an image"); return; }
+    if (f.size > 10 * 1024 * 1024) { toast.error("Max 10MB"); return; }
+    const dataUrl: string = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(String(r.result || ""));
+      r.onerror = () => rej(new Error("read"));
+      r.readAsDataURL(f);
+    });
+    const userMsg: ChatMsg = { id: idRef.current++, role: "user", image: dataUrl, note };
+    setMsgs((m) => [...m, userMsg]);
+    setNote("");
+    setBusy(true);
+    try {
+      const r = await analyze({ data: { image: dataUrl, note } });
+      if (!r.ok) {
+        setMsgs((m) => [...m, { id: idRef.current++, role: "bot", text: `Could not analyze: ${r.reason}` }]);
+        return;
+      }
+      const a: AnalysisResult = r;
+      setMsgs((m) => [...m, {
+        id: idRef.current++, role: "bot",
+        text: `${a.side} ${a.symbol} • ${a.confidence}% confidence`,
+        analysis: a,
+      }]);
+    } catch (e) {
+      setMsgs((m) => [...m, { id: idRef.current++, role: "bot", text: e instanceof Error ? e.message : "Failed" }]);
+    } finally {
+      setBusy(false);
+    }
+  };
 
-  const total = trades.reduce((s, t) => s + t.pnl, 0);
+  const execute = (a: AnalysisResult) => {
+    if (!broker) {
+      toast.error("Link your MetaTrader account first");
+      return;
+    }
+    if (!confirm(`Execute ${a.side} on ${a.symbol} via ${broker.broker} (account ${broker.login})?`)) return;
+    toast.success(`Sent ${a.side} ${a.symbol} to MT`);
+    setMsgs((m) => [...m, {
+      id: idRef.current++, role: "bot",
+      text: `✅ Trade sent: ${a.side} ${a.symbol} on ${broker.broker} #${broker.login}`,
+    }]);
+  };
 
   return (
-    <div className="px-5 pt-5">
+    <div className="flex h-full flex-col px-4 pt-4">
       <div className="flex items-center gap-2">
-        <Target className="h-5 w-5 text-cyan-300" />
-        <h1 className="text-xl font-bold">Market Scanner</h1>
+        <ScanLine className="h-5 w-5" style={{ color: "var(--app-accent)" }} />
+        <h1 className="text-xl font-bold">Chart Scanner</h1>
       </div>
-      <p className="text-xs text-white/50">Live trades executed by your EA</p>
+      <p className="text-xs text-white/50">Send a screenshot, get BUY / SELL, execute to MT</p>
 
-      <div className="mt-4 rounded-2xl bg-gradient-to-br from-cyan-500/15 to-blue-700/10 p-5 ring-1 ring-cyan-400/20">
-        <p className="text-[11px] uppercase tracking-wider text-white/60">Session P&amp;L</p>
-        <p className={`mt-1 text-3xl font-bold tabular-nums ${total >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
-          {total >= 0 ? "+" : ""}{total.toFixed(2)} <span className="text-base text-white/50">USD</span>
-        </p>
-      </div>
-
-      <div className="mt-4 space-y-2">
-        {trades.length === 0 && <p className="py-10 text-center text-sm text-white/40">Waiting for first trade…</p>}
-        {trades.map((t) => (
-          <div key={t.id} className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.03] p-3">
-            <div className={`grid h-9 w-9 place-items-center rounded-lg ${t.side === "BUY" ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300"}`}>
-              {t.side === "BUY" ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-semibold">{t.symbol}</span>
-                <span className={`font-mono text-sm tabular-nums ${t.pnl >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
-                  {t.pnl >= 0 ? "+" : ""}{t.pnl.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-[11px] text-white/50">
-                <span>{t.side} • {t.lot} lots @ {t.price}</span>
-                <span>{t.at}</span>
-              </div>
-            </div>
+      <div className="mt-3 flex-1 space-y-3 overflow-y-auto pb-4">
+        {msgs.map((m) => m.role === "user" ? (
+          <div key={m.id} className="ml-auto max-w-[80%] rounded-2xl rounded-tr-sm bg-white/10 p-2 text-right">
+            <img src={m.image} alt="chart" className="rounded-lg" />
+            {m.note && <p className="mt-1 text-[11px] text-white/60">{m.note}</p>}
+          </div>
+        ) : (
+          <div key={m.id} className="mr-auto max-w-[85%] rounded-2xl rounded-tl-sm bg-black/40 p-3 ring-1 ring-white/10">
+            <p className="text-sm font-medium">{m.text}</p>
+            {m.analysis && m.analysis.side !== "NEUTRAL" && (
+              <>
+                <div className="mt-2 grid grid-cols-3 gap-2 text-center text-[10px]">
+                  <div className="rounded bg-white/5 p-1.5"><div className="text-white/40">Entry</div><div className="font-bold">{m.analysis.entry || "—"}</div></div>
+                  <div className="rounded bg-white/5 p-1.5"><div className="text-white/40">SL</div><div className="font-bold">{m.analysis.sl || "—"}</div></div>
+                  <div className="rounded bg-white/5 p-1.5"><div className="text-white/40">TP</div><div className="font-bold">{m.analysis.tp || "—"}</div></div>
+                </div>
+                {m.analysis.reason && <p className="mt-2 text-[11px] text-white/60">{m.analysis.reason}</p>}
+                <button
+                  onClick={() => execute(m.analysis!)}
+                  className={`mt-2 w-full rounded-lg py-2 text-xs font-bold ${m.analysis.side === "BUY" ? "bg-emerald-500 text-black" : "bg-rose-500 text-white"}`}
+                >
+                  Execute {m.analysis.side} on MT
+                </button>
+              </>
+            )}
           </div>
         ))}
+        {busy && <p className="text-center text-xs text-white/40">Analyzing chart…</p>}
+      </div>
+
+      <div className="sticky bottom-0 mb-2 flex items-center gap-2 rounded-2xl bg-black/60 p-2 ring-1 ring-white/10">
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) onPick(f); e.target.value = ""; }}
+        />
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={busy}
+          className="grid h-9 w-9 place-items-center rounded-xl text-black disabled:opacity-50"
+          style={{ backgroundColor: "var(--app-accent)" }}
+        >
+          <Upload className="h-4 w-4" />
+        </button>
+        <input
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Optional note (timeframe, pair…)"
+          maxLength={200}
+          className="flex-1 bg-transparent text-sm outline-none placeholder:text-white/30"
+        />
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={busy}
+          className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 disabled:opacity-50"
+          title="Send screenshot"
+        >
+          <Send className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );
 }
+
 
 const PRESET_COLORS = [
   "#22d3ee", "#3b82f6", "#8b5cf6", "#ec4899",
