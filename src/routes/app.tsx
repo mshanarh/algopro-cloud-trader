@@ -1,22 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
   Bot, Play, Square, KeyRound, Home, Settings as SettingsIcon,
-  HelpCircle, Activity, Wifi, Battery, Signal, Flame,
-  TrendingUp, TrendingDown, LogOut, Cpu, MemoryStick, ShieldCheck,
+  HelpCircle, Wifi, Battery, Signal, Flame,
+  TrendingUp, TrendingDown, LogOut, ShieldCheck,
   LineChart, Database, Target, Trash2, BarChart3, Plus, Palette, Film, X,
+  Upload, Send, ScanLine, ArrowLeft, FileText,
 } from "lucide-react";
 import { validateLicense, validateMentor } from "@/lib/portal.functions";
+import { analyzeChart } from "@/lib/scanner.functions";
 
 export const Route = createFileRoute("/app")({
   component: PhoneApp,
   head: () => ({
-    meta: [{ title: "Algopro — Mobile" }],
+    meta: [{ title: "Algopro EA — Mobile" }],
     links: [{ rel: "manifest", href: "/manifest.webmanifest" }],
   }),
 });
+
 
 type Session = {
   key: string;
