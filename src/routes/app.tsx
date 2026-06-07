@@ -754,11 +754,10 @@ function SettingsScreen({
       </div>
 
       <div className="mt-4 space-y-2 rounded-2xl border border-white/10 bg-white/[0.04] p-2">
-        <Row icon={<Cpu className="h-4 w-4" />} label="VPS CPU" value="14%" />
-        <Row icon={<MemoryStick className="h-4 w-4" />} label="VPS RAM" value="612 MB" />
         <Row icon={<ShieldCheck className="h-4 w-4" />} label="Encryption" value="AES-256" />
-        <Row icon={<Activity className="h-4 w-4" />} label="Uptime" value="99.98%" />
       </div>
+
+
 
       <div className="mt-4 space-y-2 rounded-2xl border border-white/10 bg-white/[0.04] p-2">
         <Row label="User" value={session.username} />
