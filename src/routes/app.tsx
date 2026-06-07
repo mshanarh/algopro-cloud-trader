@@ -491,24 +491,88 @@ function PillBtn({ icon, label, onClick }: { icon: React.ReactNode; label: strin
 }
 
 function SymbolsScreen({ session }: { session: Session }) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const symbols = session.symbols.length ? session.symbols : ["EURUSD", "XAUUSD", "GBPUSD", "BTCUSD"];
+
+  // Stable per-symbol mock stats so each tap shows consistent info
+  const stats = useMemo(() => {
+    const r = (seed: number) => {
+      let x = seed;
+      return () => {
+        x = (x * 9301 + 49297) % 233280;
+        return x / 233280;
+      };
+    };
+    const map: Record<string, { trades: number; lot: number; side: "BUY" | "SELL"; pnl: number }> = {};
+    for (const s of symbols) {
+      const seed = [...s].reduce((a, c) => a + c.charCodeAt(0), 0);
+      const rnd = r(seed);
+      map[s] = {
+        trades: Math.floor(rnd() * 18) + 2,
+        lot: +(rnd() * 0.5 + 0.01).toFixed(2),
+        side: rnd() > 0.5 ? "BUY" : "SELL",
+        pnl: +(rnd() * 160 - 40).toFixed(2),
+      };
+    }
+    return map;
+  }, [symbols.join(",")]);
+
+  if (selected) {
+    const s = stats[selected];
+    return (
+      <div className="px-5 pt-5">
+        <button onClick={() => setSelected(null)} className="mb-3 inline-flex items-center gap-1 text-xs text-white/60">
+          <ArrowLeft className="h-3.5 w-3.5" /> Back
+        </button>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">{selected}</h2>
+            <span className={`rounded-full px-3 py-1 text-xs font-bold ${s.side === "BUY" ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300"}`}>
+              {s.side}
+            </span>
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+            <Stat label="Trades" value={String(s.trades)} />
+            <Stat label="Lot size" value={s.lot.toFixed(2)} />
+            <Stat label="P&L" value={`${s.pnl >= 0 ? "+" : ""}${s.pnl.toFixed(2)}`} valueClass={s.pnl >= 0 ? "text-emerald-300" : "text-rose-300"} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="px-5 pt-5">
       <h1 className="text-xl font-bold">Symbols</h1>
-      <p className="text-xs text-white/50">Pairs this EA trades on your account</p>
+      <p className="text-xs text-white/50">Tap a symbol to see trades and direction</p>
       <div className="mt-4 grid grid-cols-2 gap-2">
-        {(session.symbols.length ? session.symbols : ["EURUSD", "XAUUSD", "GBPUSD", "BTCUSD"]).map((s) => (
-          <div key={s} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+        {symbols.map((s) => (
+          <button
+            key={s}
+            onClick={() => setSelected(s)}
+            className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left active:scale-[0.98]"
+          >
             <div className="flex items-center gap-2">
-              <LineChart className="h-4 w-4 text-cyan-300" />
+              <LineChart className="h-4 w-4" style={{ color: "var(--app-accent)" }} />
               <span className="font-semibold">{s}</span>
             </div>
             <p className="mt-2 text-[10px] uppercase tracking-wider text-emerald-300">Active</p>
-          </div>
+          </button>
         ))}
       </div>
     </div>
   );
 }
+
+function Stat({ label, value, valueClass = "" }: { label: string; value: string; valueClass?: string }) {
+  return (
+    <div className="rounded-xl bg-black/30 p-3">
+      <p className="text-[10px] uppercase tracking-wider text-white/40">{label}</p>
+      <p className={`mt-1 text-lg font-bold tabular-nums ${valueClass}`}>{value}</p>
+    </div>
+  );
+}
+
 
 function MetaTraderScreen() {
   const [broker, setBroker] = useState<Broker>({ broker: "", server: "", login: "", password: "" });
