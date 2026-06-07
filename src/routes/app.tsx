@@ -277,7 +277,7 @@ function MentorGate({ onSuccess }: { onSuccess: (m: Mentor) => void }) {
       <div className="mb-6 grid h-20 w-20 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-2xl shadow-violet-500/40">
         <Bot className="h-10 w-10 text-white" />
       </div>
-      <h1 className="text-2xl font-bold">Algopro</h1>
+      <h1 className="text-2xl font-bold">Algopro EA</h1>
       <p className="mt-1 text-sm text-white/60">Sign in with your email and Mentor ID</p>
 
       <form onSubmit={submit} className="mt-8 w-full space-y-3">
