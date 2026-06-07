@@ -836,7 +836,7 @@ function BottomNav({
     { id: "help", icon: HelpCircle, label: "Help" },
   ];
   return (
-    <nav className="absolute inset-x-0 bottom-0 z-20 border-t border-white/10 bg-[#06080f]/95 px-1 pb-5 pt-2 backdrop-blur">
+    <nav className="absolute inset-x-0 bottom-0 z-20 border-t border-white/10 px-1 pb-5 pt-2 backdrop-blur" style={{ backgroundColor: "color-mix(in oklab, var(--app-bg) 92%, black)" }}>
       <div className="flex items-center justify-around">
         {items.map(({ id, icon: Icon, label }) => {
           const active = tab === id;
