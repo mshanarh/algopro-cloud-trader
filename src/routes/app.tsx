@@ -130,13 +130,14 @@ function InstallBanner() {
 function PhoneFrame({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative mx-auto aspect-[9/19.5] w-full overflow-hidden bg-black sm:rounded-[3rem] sm:p-[14px] sm:shadow-[0_30px_80px_-20px_rgba(15,23,42,0.6)] sm:ring-[3px] sm:ring-slate-800">
-      <div className="relative h-full w-full overflow-hidden bg-[#0b1020] sm:rounded-[2.4rem]">
+      <div className="relative h-full w-full overflow-hidden sm:rounded-[2.4rem]" style={{ backgroundColor: "var(--app-bg)" }}>
         <div className="pointer-events-none absolute left-1/2 top-2 z-30 hidden h-7 w-32 -translate-x-1/2 rounded-full bg-black sm:block" />
         {children}
       </div>
     </div>
   );
 }
+
 
 function StatusBar() {
   const [now, setNow] = useState<string>("");
