@@ -200,10 +200,19 @@ function AppRouter() {
     else localStorage.removeItem(VIDEO_KEY);
   };
 
+  const bgTint = useMemo(
+    () => `color-mix(in oklab, ${accent} 14%, #06080f)`,
+    [accent],
+  );
+
   return (
     <div
-      className="relative flex h-full flex-col bg-[#06080f] text-white"
-      style={{ ["--app-accent" as any]: accent }}
+      className="relative flex h-full flex-col text-white"
+      style={{
+        ["--app-accent" as any]: accent,
+        ["--app-bg" as any]: bgTint,
+        backgroundColor: "var(--app-bg)",
+      }}
     >
       {bgVideo && (
         <video
@@ -216,7 +225,8 @@ function AppRouter() {
           className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-40"
         />
       )}
-      <div className="pointer-events-none absolute inset-0 bg-[#06080f]/40" />
+      <div className="pointer-events-none absolute inset-0" style={{ backgroundColor: "color-mix(in oklab, var(--app-bg) 70%, transparent)" }} />
+
       <StatusBar />
       <div className="relative z-10 flex-1 overflow-y-auto pb-24">
         {!mentor && <MentorGate onSuccess={onMentor} />}
