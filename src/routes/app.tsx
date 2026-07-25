@@ -437,20 +437,23 @@ function LicenseGate({ mentor, onSuccess, onSignOut }: { mentor: Mentor; onSucce
   );
 }
 
-function HomeScreen({ session, onDelete }: { session: Session; onDelete: () => void }) {
+function HomeScreen({ session, onDelete, style, pairs }: { session: Session; onDelete: () => void; style: UIStyle; pairs: Pair[] }) {
   const [running, setRunning] = useState(false);
-  const [card, setCard] = useState(false);
-  const [logsOpen, setLogsOpen] = useState(false);
-
-  const openCard = () => setCard(true);
-  const closeCard = () => { setCard(false); setLogsOpen(false); };
+  const [bubbleOpen, setBubbleOpen] = useState(false);
 
   const toggle = () => {
     setRunning((r) => {
       const next = !r;
-      toast[next ? "success" : "info"](next ? "Bot activated" : "Bot stopped");
+      if (next) {
+        speak(`${session.ea_name} is now trading`);
+        toast.success("Bot activated");
+      } else {
+        toast.info("Bot stopped");
+        try { window.speechSynthesis?.cancel(); } catch {}
+      }
       return next;
     });
+    if (!bubbleOpen) setBubbleOpen(true);
   };
 
   const handleDelete = () => {
@@ -458,24 +461,27 @@ function HomeScreen({ session, onDelete }: { session: Session; onDelete: () => v
     onDelete();
     toast.success("Licence removed");
   };
-  const onSymbols = () => toast.message("Symbols", { description: session.symbols.join(", ") || "None" });
+
+  const isMinimal = style.home === "minimal";
+  const isNeon = style.home === "neon";
+  const portraitSize = isMinimal ? "h-40 w-40" : "h-56 w-56";
 
   return (
     <div className="relative flex flex-col items-center px-5 pt-6 pb-10 text-center">
       <div
         className="pointer-events-none absolute inset-0"
-        style={{ background: `radial-gradient(circle at 50% 25%, color-mix(in oklab, var(--app-accent) 25%, transparent), transparent 55%)` }}
+        style={{ background: `radial-gradient(circle at 50% 25%, color-mix(in oklab, var(--app-accent) ${isNeon ? 45 : 25}%, transparent), transparent 55%)` }}
       />
 
       <div className="relative mt-2">
-        <div className="absolute -inset-3 rounded-full blur-2xl" style={{ background: `color-mix(in oklab, var(--app-accent) 30%, transparent)` }} />
+        <div className={`absolute -inset-3 rounded-full ${isNeon ? "blur-3xl" : "blur-2xl"}`} style={{ background: `color-mix(in oklab, var(--app-accent) ${isNeon ? 55 : 30}%, transparent)` }} />
         <button
           type="button"
-          onClick={openCard}
-          className="relative h-56 w-56 overflow-hidden rounded-full ring-2 active:scale-[0.98] transition"
+          onClick={() => setBubbleOpen(true)}
+          className={`relative ${portraitSize} overflow-hidden rounded-full ring-2 active:scale-[0.98] transition`}
           style={{
             borderColor: "var(--app-accent)",
-            boxShadow: `0 0 60px -10px var(--app-accent)`,
+            boxShadow: `0 0 ${isNeon ? 90 : 60}px -10px var(--app-accent)`,
           }}
         >
           {session.ea_image ? (
@@ -494,28 +500,30 @@ function HomeScreen({ session, onDelete }: { session: Session; onDelete: () => v
         </div>
       </div>
 
-      <p className="mt-10 text-[11px] tracking-[0.25em] text-white/50">YOU'RE TRADING WITH</p>
-      <h1 className="mt-1 text-3xl font-extrabold uppercase tracking-tight leading-tight">
+      {!isMinimal && <p className="mt-10 text-[11px] tracking-[0.25em] text-white/50">YOU'RE TRADING WITH</p>}
+      <h1 className={`${isMinimal ? "mt-6 text-2xl" : "mt-1 text-3xl"} font-extrabold uppercase tracking-tight leading-tight`}>
         {session.ea_name}
       </h1>
 
-      <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-black/70 px-4 py-1.5 ring-1 ring-white/10">
-        <Flame className="h-3.5 w-3.5 text-orange-400" />
-        <span className="text-[11px] text-white/60">Powered by:</span>
-        <span className="text-[11px] font-bold tracking-wider">ALGOPRO</span>
-      </div>
+      {!isMinimal && (
+        <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-black/70 px-4 py-1.5 ring-1 ring-white/10">
+          <Flame className="h-3.5 w-3.5 text-orange-400" />
+          <span className="text-[11px] text-white/60">Powered by:</span>
+          <span className="text-[11px] font-bold tracking-wider">ALGOPRO</span>
+        </div>
+      )}
 
       <div className="relative mt-8 flex w-full max-w-[320px] items-center justify-around rounded-full bg-white py-3 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)]">
         <PillBtn icon={<Trash2 className="h-5 w-5" />} label="DELETE" onClick={handleDelete} />
         <button
-          onClick={openCard}
+          onClick={toggle}
           className={`grid h-14 w-14 place-items-center rounded-full text-white shadow-lg transition active:scale-95 ${
             running ? "bg-red-600 shadow-red-500/50" : "bg-emerald-500 shadow-emerald-500/50"
           }`}
         >
           {running ? <Square className="h-5 w-5 fill-white" /> : <Play className="h-5 w-5 fill-white" />}
         </button>
-        <PillBtn icon={<BarChart3 className="h-5 w-5" />} label="SYMBOLS" onClick={onSymbols} />
+        <PillBtn icon={<BarChart3 className="h-5 w-5" />} label="SYMBOLS" onClick={() => setBubbleOpen(true)} />
       </div>
       <p className="mt-2 text-[10px] uppercase tracking-[0.3em] text-white/30">
         {running ? "STOP" : "START"}
@@ -525,28 +533,79 @@ function HomeScreen({ session, onDelete }: { session: Session; onDelete: () => v
         POWERED BY: ALGOPRO
       </p>
 
-      {card && (
-        <TradeCard
+      {bubbleOpen && (
+        <TradeBubble
           session={session}
           running={running}
           onToggle={toggle}
-          onClose={closeCard}
-          logsOpen={logsOpen}
-          setLogsOpen={setLogsOpen}
+          onClose={() => setBubbleOpen(false)}
+          pairs={pairs}
         />
       )}
     </div>
   );
 }
 
-function TradeCard({
-  session, running, onToggle, onClose, logsOpen, setLogsOpen,
+function TradeBubble({
+  session, running, onToggle, onClose, pairs,
 }: {
-  session: Session; running: boolean; onToggle: () => void; onClose: () => void;
-  logsOpen: boolean; setLogsOpen: (v: boolean) => void;
+  session: Session; running: boolean; onToggle: () => void; onClose: () => void; pairs: Pair[];
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const [logsOpen, setLogsOpen] = useState(false);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const dragRef = useRef<{ dx: number; dy: number; moved: boolean; startX: number; startY: number } | null>(null);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    dragRef.current = { dx: e.clientX - pos.x, dy: e.clientY - pos.y, moved: false, startX: e.clientX, startY: e.clientY };
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!dragRef.current) return;
+    const nx = e.clientX - dragRef.current.dx;
+    const ny = e.clientY - dragRef.current.dy;
+    if (Math.abs(e.clientX - dragRef.current.startX) + Math.abs(e.clientY - dragRef.current.startY) > 6) {
+      dragRef.current.moved = true;
+    }
+    setPos({ x: nx, y: ny });
+  };
+  const onPointerUp = (e: React.PointerEvent) => {
+    (e.target as Element).releasePointerCapture?.(e.pointerId);
+    const moved = dragRef.current?.moved;
+    dragRef.current = null;
+    if (!moved) setExpanded((v) => !v);
+  };
+
+  if (!expanded) {
+    return (
+      <div
+        className="fixed z-50 touch-none select-none"
+        style={{ left: "50%", top: "60%", transform: `translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px))` }}
+      >
+        <button
+          type="button"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          className="relative grid h-20 w-20 place-items-center overflow-hidden rounded-full ring-2 shadow-2xl active:scale-95"
+          style={{ borderColor: "var(--app-accent)", boxShadow: `0 0 40px var(--app-accent)`, backgroundColor: "#0a0f1a" }}
+          aria-label="Open trade card"
+        >
+          {session.ea_image ? (
+            <img src={session.ea_image} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <Bot className="h-8 w-8 text-white" />
+          )}
+          <span className={`absolute -bottom-0.5 left-1/2 -translate-x-1/2 rounded-full px-1.5 text-[9px] font-bold ${running ? "bg-emerald-500 text-black" : "bg-white/20 text-white"}`}>
+            {running ? "LIVE" : "IDLE"}
+          </span>
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" onClick={() => setExpanded(false)}>
       <div
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-sm overflow-hidden rounded-3xl bg-slate-900 text-white ring-1 ring-white/10 shadow-2xl"
@@ -560,13 +619,23 @@ function TradeCard({
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
-          <button
-            onClick={onClose}
-            className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-slate-800/90 text-white ring-1 ring-white/20"
-            aria-label="Close"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="absolute right-3 top-3 flex gap-2">
+            <button
+              onClick={() => setExpanded(false)}
+              className="grid h-9 w-9 place-items-center rounded-full bg-slate-800/90 text-white ring-1 ring-white/20"
+              aria-label="Minimize"
+              title="Minimize to bubble"
+            >
+              <div className="h-0.5 w-3 bg-white" />
+            </button>
+            <button
+              onClick={onClose}
+              className="grid h-9 w-9 place-items-center rounded-full bg-slate-800/90 text-white ring-1 ring-white/20"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
           <div className="absolute bottom-3 left-4 right-4 text-left">
             <h2 className="text-2xl font-extrabold leading-tight">{session.ea_name}</h2>
             <p className="mt-0.5 text-sm font-semibold text-white/80">
@@ -581,10 +650,16 @@ function TradeCard({
             Server: <span className="text-emerald-400">Connected</span>
           </p>
 
+          {pairs.length > 0 && (
+            <p className="mt-1 text-[11px] text-white/50">
+              {pairs.length} pair{pairs.length > 1 ? "s" : ""} configured · {pairs.reduce((a, p) => a + p.trades, 0)} trades/cycle
+            </p>
+          )}
+
           <div className="mt-4 grid grid-cols-2 gap-3">
             <button
               onClick={onToggle}
-              className="flex items-center justify-center gap-2 rounded-full bg-red-500 py-3 text-sm font-bold text-white shadow-lg shadow-red-500/40 active:scale-[0.98]"
+              className={`flex items-center justify-center gap-2 rounded-full py-3 text-sm font-bold text-white shadow-lg active:scale-[0.98] ${running ? "bg-red-500 shadow-red-500/40" : "bg-emerald-500 shadow-emerald-500/40"}`}
             >
               {running ? <Square className="h-4 w-4 fill-white" /> : <Play className="h-4 w-4 fill-white" />}
               {running ? "Stop Trade" : "Start Trade"}
@@ -606,7 +681,7 @@ function TradeCard({
 
           {logsOpen && (
             <div className="mt-4">
-              <TradeLogs running={running} symbols={session.symbols} />
+              <TradeLogs running={running} symbols={pairs.length ? pairs.map((p) => p.symbol) : session.symbols} />
             </div>
           )}
         </div>
