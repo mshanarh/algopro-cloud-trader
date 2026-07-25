@@ -1362,9 +1362,31 @@ function HelpScreen() {
 
 type TabId = "home" | "symbols" | "metatrader" | "scanner" | "settings" | "help";
 
+function StyleRow({ label, value, options, onChange }: { label: string; value: string; options: { v: string; l: string }[]; onChange: (v: string) => void }) {
+  return (
+    <div>
+      <p className="mb-1.5 text-[11px] uppercase tracking-wider text-white/50">{label}</p>
+      <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-white/[0.04] p-1">
+        {options.map((o) => (
+          <button
+            key={o.v}
+            type="button"
+            onClick={() => onChange(o.v)}
+            className={`rounded-lg px-2 py-2 text-xs font-semibold transition ${value === o.v ? "bg-[var(--app-accent)] text-black" : "text-white/60"}`}
+          >
+            {o.l}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+type TabId = "home" | "symbols" | "metatrader" | "scanner" | "settings" | "help";
+
 function BottomNav({
-  tab, setTab,
-}: { tab: string; setTab: (t: TabId) => void }) {
+  tab, setTab, style,
+}: { tab: string; setTab: (t: TabId) => void; style: UIStyle }) {
   const items: { id: TabId; icon: typeof Home; label: string }[] = [
     { id: "home", icon: Home, label: "Home" },
     { id: "symbols", icon: LineChart, label: "Symbols" },
@@ -1373,20 +1395,22 @@ function BottomNav({
     { id: "settings", icon: SettingsIcon, label: "Settings" },
     { id: "help", icon: HelpCircle, label: "Help" },
   ];
+  const showLabels = style.nav !== "icons";
+  const isPill = style.nav === "pill";
   return (
     <nav className="absolute inset-x-0 bottom-0 z-20 border-t border-white/10 px-1 pb-5 pt-2 backdrop-blur" style={{ backgroundColor: "color-mix(in oklab, var(--app-bg) 92%, black)" }}>
-      <div className="flex items-center justify-around">
+      <div className={`flex items-center justify-around ${isPill ? "mx-2 rounded-full bg-white/[0.06] px-1 py-1" : ""}`}>
         {items.map(({ id, icon: Icon, label }) => {
           const active = tab === id;
           return (
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[9px] transition ${active ? "" : "text-white/50"}`}
-              style={active ? { color: "var(--app-accent)" } : undefined}
+              className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[9px] transition ${active ? "" : "text-white/50"} ${isPill && active ? "bg-[var(--app-accent)] text-black" : ""}`}
+              style={active && !isPill ? { color: "var(--app-accent)" } : undefined}
             >
               <Icon className="h-5 w-5" />
-              {label}
+              {showLabels && label}
             </button>
           );
         })}
