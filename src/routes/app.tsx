@@ -55,6 +55,25 @@ const MENTOR_KEY = "algopro.mentor";
 const THEME_KEY = "algopro.theme";
 const VIDEO_KEY = "algopro.bgvideo";
 const BROKER_KEY = "algopro.broker";
+const PAIRS_KEY = "algopro.pairs";
+const STYLE_KEY = "algopro.style";
+
+type Pair = { symbol: string; lot: number; trades: number };
+type UIStyle = { home: "classic" | "minimal" | "neon"; nav: "icons" | "labels" | "pill"; trading: "scalping" | "day" | "swing" };
+const DEFAULT_STYLE: UIStyle = { home: "classic", nav: "icons", trading: "day" };
+
+function speak(text: string) {
+  try {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-US"; u.rate = 0.95; u.pitch = 1;
+    const voices = window.speechSynthesis.getVoices();
+    const en = voices.find((v) => v.lang?.startsWith("en"));
+    if (en) u.voice = en;
+    window.speechSynthesis.speak(u);
+  } catch {}
+}
 
 function PhoneApp() {
   return (
@@ -167,6 +186,8 @@ function AppRouter() {
   const [tab, setTab] = useState<"home" | "symbols" | "metatrader" | "scanner" | "settings" | "help">("home");
   const [accent, setAccent] = useState<string>("#22d3ee");
   const [bgVideo, setBgVideo] = useState<string>("");
+  const [style, setStyle] = useState<UIStyle>(DEFAULT_STYLE);
+  const [pairs, setPairs] = useState<Pair[]>([]);
 
   useEffect(() => {
     try {
@@ -178,8 +199,27 @@ function AppRouter() {
       if (t) setAccent(t);
       const v = localStorage.getItem(VIDEO_KEY);
       if (v) setBgVideo(v);
+      const st = localStorage.getItem(STYLE_KEY);
+      if (st) setStyle({ ...DEFAULT_STYLE, ...JSON.parse(st) });
+      const p = localStorage.getItem(PAIRS_KEY);
+      if (p) setPairs(JSON.parse(p));
     } catch {}
   }, []);
+
+  const updateStyle = (s: Partial<UIStyle>) => {
+    setStyle((prev) => {
+      const next = { ...prev, ...s };
+      localStorage.setItem(STYLE_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+  const updatePairs = (fn: (p: Pair[]) => Pair[]) => {
+    setPairs((prev) => {
+      const next = fn(prev);
+      localStorage.setItem(PAIRS_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
 
   const onMentor = (m: Mentor) => { setMentor(m); localStorage.setItem(MENTOR_KEY, JSON.stringify(m)); };
   const onLogin = (s: Session) => { setSession(s); localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); };
@@ -231,8 +271,8 @@ function AppRouter() {
       <div className="relative z-10 flex-1 overflow-y-auto pb-24">
         {!mentor && <MentorGate onSuccess={onMentor} />}
         {mentor && !session && <LicenseGate mentor={mentor} onSuccess={onLogin} onSignOut={onSignOutAll} />}
-        {mentor && session && tab === "home" && <HomeScreen session={session} onDelete={onLogout} />}
-        {mentor && session && tab === "symbols" && <SymbolsScreen session={session} />}
+        {mentor && session && tab === "home" && <HomeScreen session={session} onDelete={onLogout} style={style} pairs={pairs} />}
+        {mentor && session && tab === "symbols" && <SymbolsScreen session={session} pairs={pairs} setPairs={updatePairs} />}
         {mentor && session && tab === "metatrader" && <MetaTraderScreen />}
         {mentor && session && tab === "scanner" && <ScannerScreen session={session} />}
         {mentor && session && tab === "settings" && (
@@ -243,11 +283,13 @@ function AppRouter() {
             onAccent={updateAccent}
             bgVideo={bgVideo}
             onBgVideo={updateVideo}
+            style={style}
+            onStyle={updateStyle}
           />
         )}
         {mentor && session && tab === "help" && <HelpScreen />}
       </div>
-      {mentor && session && <BottomNav tab={tab} setTab={setTab} />}
+      {mentor && session && <BottomNav tab={tab} setTab={setTab} style={style} />}
     </div>
   );
 }
@@ -395,20 +437,23 @@ function LicenseGate({ mentor, onSuccess, onSignOut }: { mentor: Mentor; onSucce
   );
 }
 
-function HomeScreen({ session, onDelete }: { session: Session; onDelete: () => void }) {
+function HomeScreen({ session, onDelete, style, pairs }: { session: Session; onDelete: () => void; style: UIStyle; pairs: Pair[] }) {
   const [running, setRunning] = useState(false);
-  const [card, setCard] = useState(false);
-  const [logsOpen, setLogsOpen] = useState(false);
-
-  const openCard = () => setCard(true);
-  const closeCard = () => { setCard(false); setLogsOpen(false); };
+  const [bubbleOpen, setBubbleOpen] = useState(false);
 
   const toggle = () => {
     setRunning((r) => {
       const next = !r;
-      toast[next ? "success" : "info"](next ? "Bot activated" : "Bot stopped");
+      if (next) {
+        speak(`${session.ea_name} is now trading`);
+        toast.success("Bot activated");
+      } else {
+        toast.info("Bot stopped");
+        try { window.speechSynthesis?.cancel(); } catch {}
+      }
       return next;
     });
+    if (!bubbleOpen) setBubbleOpen(true);
   };
 
   const handleDelete = () => {
@@ -416,24 +461,27 @@ function HomeScreen({ session, onDelete }: { session: Session; onDelete: () => v
     onDelete();
     toast.success("Licence removed");
   };
-  const onSymbols = () => toast.message("Symbols", { description: session.symbols.join(", ") || "None" });
+
+  const isMinimal = style.home === "minimal";
+  const isNeon = style.home === "neon";
+  const portraitSize = isMinimal ? "h-40 w-40" : "h-56 w-56";
 
   return (
     <div className="relative flex flex-col items-center px-5 pt-6 pb-10 text-center">
       <div
         className="pointer-events-none absolute inset-0"
-        style={{ background: `radial-gradient(circle at 50% 25%, color-mix(in oklab, var(--app-accent) 25%, transparent), transparent 55%)` }}
+        style={{ background: `radial-gradient(circle at 50% 25%, color-mix(in oklab, var(--app-accent) ${isNeon ? 45 : 25}%, transparent), transparent 55%)` }}
       />
 
       <div className="relative mt-2">
-        <div className="absolute -inset-3 rounded-full blur-2xl" style={{ background: `color-mix(in oklab, var(--app-accent) 30%, transparent)` }} />
+        <div className={`absolute -inset-3 rounded-full ${isNeon ? "blur-3xl" : "blur-2xl"}`} style={{ background: `color-mix(in oklab, var(--app-accent) ${isNeon ? 55 : 30}%, transparent)` }} />
         <button
           type="button"
-          onClick={openCard}
-          className="relative h-56 w-56 overflow-hidden rounded-full ring-2 active:scale-[0.98] transition"
+          onClick={() => setBubbleOpen(true)}
+          className={`relative ${portraitSize} overflow-hidden rounded-full ring-2 active:scale-[0.98] transition`}
           style={{
             borderColor: "var(--app-accent)",
-            boxShadow: `0 0 60px -10px var(--app-accent)`,
+            boxShadow: `0 0 ${isNeon ? 90 : 60}px -10px var(--app-accent)`,
           }}
         >
           {session.ea_image ? (
@@ -452,28 +500,30 @@ function HomeScreen({ session, onDelete }: { session: Session; onDelete: () => v
         </div>
       </div>
 
-      <p className="mt-10 text-[11px] tracking-[0.25em] text-white/50">YOU'RE TRADING WITH</p>
-      <h1 className="mt-1 text-3xl font-extrabold uppercase tracking-tight leading-tight">
+      {!isMinimal && <p className="mt-10 text-[11px] tracking-[0.25em] text-white/50">YOU'RE TRADING WITH</p>}
+      <h1 className={`${isMinimal ? "mt-6 text-2xl" : "mt-1 text-3xl"} font-extrabold uppercase tracking-tight leading-tight`}>
         {session.ea_name}
       </h1>
 
-      <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-black/70 px-4 py-1.5 ring-1 ring-white/10">
-        <Flame className="h-3.5 w-3.5 text-orange-400" />
-        <span className="text-[11px] text-white/60">Powered by:</span>
-        <span className="text-[11px] font-bold tracking-wider">ALGOPRO</span>
-      </div>
+      {!isMinimal && (
+        <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-black/70 px-4 py-1.5 ring-1 ring-white/10">
+          <Flame className="h-3.5 w-3.5 text-orange-400" />
+          <span className="text-[11px] text-white/60">Powered by:</span>
+          <span className="text-[11px] font-bold tracking-wider">ALGOPRO</span>
+        </div>
+      )}
 
       <div className="relative mt-8 flex w-full max-w-[320px] items-center justify-around rounded-full bg-white py-3 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)]">
         <PillBtn icon={<Trash2 className="h-5 w-5" />} label="DELETE" onClick={handleDelete} />
         <button
-          onClick={openCard}
+          onClick={toggle}
           className={`grid h-14 w-14 place-items-center rounded-full text-white shadow-lg transition active:scale-95 ${
             running ? "bg-red-600 shadow-red-500/50" : "bg-emerald-500 shadow-emerald-500/50"
           }`}
         >
           {running ? <Square className="h-5 w-5 fill-white" /> : <Play className="h-5 w-5 fill-white" />}
         </button>
-        <PillBtn icon={<BarChart3 className="h-5 w-5" />} label="SYMBOLS" onClick={onSymbols} />
+        <PillBtn icon={<BarChart3 className="h-5 w-5" />} label="SYMBOLS" onClick={() => setBubbleOpen(true)} />
       </div>
       <p className="mt-2 text-[10px] uppercase tracking-[0.3em] text-white/30">
         {running ? "STOP" : "START"}
@@ -483,28 +533,79 @@ function HomeScreen({ session, onDelete }: { session: Session; onDelete: () => v
         POWERED BY: ALGOPRO
       </p>
 
-      {card && (
-        <TradeCard
+      {bubbleOpen && (
+        <TradeBubble
           session={session}
           running={running}
           onToggle={toggle}
-          onClose={closeCard}
-          logsOpen={logsOpen}
-          setLogsOpen={setLogsOpen}
+          onClose={() => setBubbleOpen(false)}
+          pairs={pairs}
         />
       )}
     </div>
   );
 }
 
-function TradeCard({
-  session, running, onToggle, onClose, logsOpen, setLogsOpen,
+function TradeBubble({
+  session, running, onToggle, onClose, pairs,
 }: {
-  session: Session; running: boolean; onToggle: () => void; onClose: () => void;
-  logsOpen: boolean; setLogsOpen: (v: boolean) => void;
+  session: Session; running: boolean; onToggle: () => void; onClose: () => void; pairs: Pair[];
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const [logsOpen, setLogsOpen] = useState(false);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const dragRef = useRef<{ dx: number; dy: number; moved: boolean; startX: number; startY: number } | null>(null);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    dragRef.current = { dx: e.clientX - pos.x, dy: e.clientY - pos.y, moved: false, startX: e.clientX, startY: e.clientY };
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!dragRef.current) return;
+    const nx = e.clientX - dragRef.current.dx;
+    const ny = e.clientY - dragRef.current.dy;
+    if (Math.abs(e.clientX - dragRef.current.startX) + Math.abs(e.clientY - dragRef.current.startY) > 6) {
+      dragRef.current.moved = true;
+    }
+    setPos({ x: nx, y: ny });
+  };
+  const onPointerUp = (e: React.PointerEvent) => {
+    (e.target as Element).releasePointerCapture?.(e.pointerId);
+    const moved = dragRef.current?.moved;
+    dragRef.current = null;
+    if (!moved) setExpanded((v) => !v);
+  };
+
+  if (!expanded) {
+    return (
+      <div
+        className="fixed z-50 touch-none select-none"
+        style={{ left: "50%", top: "60%", transform: `translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px))` }}
+      >
+        <button
+          type="button"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          className="relative grid h-20 w-20 place-items-center overflow-hidden rounded-full ring-2 shadow-2xl active:scale-95"
+          style={{ borderColor: "var(--app-accent)", boxShadow: `0 0 40px var(--app-accent)`, backgroundColor: "#0a0f1a" }}
+          aria-label="Open trade card"
+        >
+          {session.ea_image ? (
+            <img src={session.ea_image} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <Bot className="h-8 w-8 text-white" />
+          )}
+          <span className={`absolute -bottom-0.5 left-1/2 -translate-x-1/2 rounded-full px-1.5 text-[9px] font-bold ${running ? "bg-emerald-500 text-black" : "bg-white/20 text-white"}`}>
+            {running ? "LIVE" : "IDLE"}
+          </span>
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" onClick={() => setExpanded(false)}>
       <div
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-sm overflow-hidden rounded-3xl bg-slate-900 text-white ring-1 ring-white/10 shadow-2xl"
@@ -518,13 +619,23 @@ function TradeCard({
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
-          <button
-            onClick={onClose}
-            className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-slate-800/90 text-white ring-1 ring-white/20"
-            aria-label="Close"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="absolute right-3 top-3 flex gap-2">
+            <button
+              onClick={() => setExpanded(false)}
+              className="grid h-9 w-9 place-items-center rounded-full bg-slate-800/90 text-white ring-1 ring-white/20"
+              aria-label="Minimize"
+              title="Minimize to bubble"
+            >
+              <div className="h-0.5 w-3 bg-white" />
+            </button>
+            <button
+              onClick={onClose}
+              className="grid h-9 w-9 place-items-center rounded-full bg-slate-800/90 text-white ring-1 ring-white/20"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
           <div className="absolute bottom-3 left-4 right-4 text-left">
             <h2 className="text-2xl font-extrabold leading-tight">{session.ea_name}</h2>
             <p className="mt-0.5 text-sm font-semibold text-white/80">
@@ -539,10 +650,16 @@ function TradeCard({
             Server: <span className="text-emerald-400">Connected</span>
           </p>
 
+          {pairs.length > 0 && (
+            <p className="mt-1 text-[11px] text-white/50">
+              {pairs.length} pair{pairs.length > 1 ? "s" : ""} configured · {pairs.reduce((a, p) => a + p.trades, 0)} trades/cycle
+            </p>
+          )}
+
           <div className="mt-4 grid grid-cols-2 gap-3">
             <button
               onClick={onToggle}
-              className="flex items-center justify-center gap-2 rounded-full bg-red-500 py-3 text-sm font-bold text-white shadow-lg shadow-red-500/40 active:scale-[0.98]"
+              className={`flex items-center justify-center gap-2 rounded-full py-3 text-sm font-bold text-white shadow-lg active:scale-[0.98] ${running ? "bg-red-500 shadow-red-500/40" : "bg-emerald-500 shadow-emerald-500/40"}`}
             >
               {running ? <Square className="h-4 w-4 fill-white" /> : <Play className="h-4 w-4 fill-white" />}
               {running ? "Stop Trade" : "Start Trade"}
@@ -564,7 +681,7 @@ function TradeCard({
 
           {logsOpen && (
             <div className="mt-4">
-              <TradeLogs running={running} symbols={session.symbols} />
+              <TradeLogs running={running} symbols={pairs.length ? pairs.map((p) => p.symbol) : session.symbols} />
             </div>
           )}
         </div>
@@ -637,79 +754,176 @@ function PillBtn({ icon, label, onClick }: { icon: React.ReactNode; label: strin
   );
 }
 
-function SymbolsScreen({ session }: { session: Session }) {
-  const [selected, setSelected] = useState<string | null>(null);
-  const symbols = session.symbols.length ? session.symbols : ["EURUSD", "XAUUSD", "GBPUSD", "BTCUSD"];
+const DEFAULT_AVAILABLE = [
+  "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "NZDUSD", "USDCAD",
+  "EURGBP", "EURJPY", "GBPJPY", "AUDJPY", "CHFJPY",
+  "XAUUSD", "XAGUSD", "XAUUSD.m",
+  "BTCUSD", "ETHUSD", "BTCUSD.m", "BTCUSDm",
+  "US30", "NAS100", "SPX500", "GER40", "UK100",
+];
 
-  // Stable per-symbol mock stats so each tap shows consistent info
-  const stats = useMemo(() => {
-    const r = (seed: number) => {
-      let x = seed;
-      return () => {
-        x = (x * 9301 + 49297) % 233280;
-        return x / 233280;
-      };
-    };
-    const map: Record<string, { trades: number; lot: number; side: "BUY" | "SELL"; pnl: number }> = {};
-    for (const s of symbols) {
-      const seed = [...s].reduce((a, c) => a + c.charCodeAt(0), 0);
-      const rnd = r(seed);
-      map[s] = {
-        trades: Math.floor(rnd() * 18) + 2,
-        lot: +(rnd() * 0.5 + 0.01).toFixed(2),
-        side: rnd() > 0.5 ? "BUY" : "SELL",
-        pnl: +(rnd() * 160 - 40).toFixed(2),
-      };
-    }
-    return map;
-  }, [symbols.join(",")]);
+function SymbolsScreen({ session, pairs, setPairs }: { session: Session; pairs: Pair[]; setPairs: (fn: (p: Pair[]) => Pair[]) => void }) {
+  const [tab, setTab] = useState<"mine" | "available">("mine");
+  const [query, setQuery] = useState("");
+  const [picking, setPicking] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Pair | null>(null);
 
-  if (selected) {
-    const s = stats[selected];
-    return (
-      <div className="px-5 pt-5">
-        <button onClick={() => setSelected(null)} className="mb-3 inline-flex items-center gap-1 text-xs text-white/60">
-          <ArrowLeft className="h-3.5 w-3.5" /> Back
-        </button>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">{selected}</h2>
-            <span className={`rounded-full px-3 py-1 text-xs font-bold ${s.side === "BUY" ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300"}`}>
-              {s.side}
-            </span>
-          </div>
-          <div className="mt-4 grid grid-cols-3 gap-3 text-center">
-            <Stat label="Trades" value={String(s.trades)} />
-            <Stat label="Lot size" value={s.lot.toFixed(2)} />
-            <Stat label="P&L" value={`${s.pnl >= 0 ? "+" : ""}${s.pnl.toFixed(2)}`} valueClass={s.pnl >= 0 ? "text-emerald-300" : "text-rose-300"} />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const available = useMemo(() => {
+    const merged = Array.from(new Set([...(session.symbols || []), ...DEFAULT_AVAILABLE]));
+    return merged.filter((s) => !pairs.some((p) => p.symbol === s));
+  }, [session.symbols, pairs]);
+
+  const filtered = (tab === "available" ? available : pairs.map((p) => p.symbol))
+    .filter((s) => s.toLowerCase().includes(query.trim().toLowerCase()));
+
+  const remove = (sym: string) => {
+    setPairs((prev) => prev.filter((p) => p.symbol !== sym));
+    toast.success(`Removed ${sym}`);
+  };
 
   return (
     <div className="px-5 pt-5">
-      <h1 className="text-xl font-bold">Symbols</h1>
-      <p className="text-xs text-white/50">Tap a symbol to see trades and direction</p>
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        {symbols.map((s) => (
-          <button
-            key={s}
-            onClick={() => setSelected(s)}
-            className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left active:scale-[0.98]"
-          >
-            <div className="flex items-center gap-2">
-              <LineChart className="h-4 w-4" style={{ color: "var(--app-accent)" }} />
-              <span className="font-semibold">{s}</span>
-            </div>
-            <p className="mt-2 text-[10px] uppercase tracking-wider text-emerald-300">Active</p>
-          </button>
-        ))}
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold">Trading Pairs</h1>
       </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl bg-white/[0.06] p-1">
+        <button
+          onClick={() => setTab("mine")}
+          className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition ${tab === "mine" ? "bg-[var(--app-accent)] text-black" : "text-white/60"}`}
+        >
+          My Pairs <span className="rounded-md bg-black/20 px-1.5 py-0.5 text-[10px]">{pairs.length}</span>
+        </button>
+        <button
+          onClick={() => setTab("available")}
+          className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition ${tab === "available" ? "bg-[var(--app-accent)] text-black" : "text-white/60"}`}
+        >
+          Available <span className="rounded-md bg-black/20 px-1.5 py-0.5 text-[10px]">{available.length}</span>
+        </button>
+      </div>
+
+      <div className="mt-4 flex items-center gap-2 rounded-xl bg-white/[0.06] px-3 py-2.5">
+        <BarChart3 className="h-4 w-4 text-white/40" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search symbols"
+          className="flex-1 bg-transparent text-sm outline-none placeholder:text-white/40"
+        />
+      </div>
+
+      {tab === "mine" ? (
+        <div className="mt-4 space-y-2">
+          {pairs.length === 0 && (
+            <p className="py-6 text-center text-xs text-white/40">No pairs yet. Open Available to add one.</p>
+          )}
+          {pairs.filter((p) => p.symbol.toLowerCase().includes(query.trim().toLowerCase())).map((p) => (
+            <div key={p.symbol} className="flex items-center justify-between rounded-2xl bg-white/[0.04] p-4 ring-1 ring-white/5">
+              <div>
+                <p className="text-base font-bold">{p.symbol}</p>
+                <p className="mt-0.5 text-[11px] text-white/50">Lot {p.lot.toFixed(2)} · {p.trades} trades</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setEditing(p)} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold">Edit</button>
+                <button onClick={() => remove(p.symbol)} className="grid h-8 w-8 place-items-center rounded-lg bg-rose-500/20 text-rose-300"><X className="h-4 w-4" /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {filtered.map((s) => (
+            <div key={s} className="rounded-2xl bg-white/[0.04] p-4 ring-1 ring-white/5">
+              <p className="text-base font-bold">{s}</p>
+              <p className="mt-1 text-[11px] text-white/40">min 0.01</p>
+              <button
+                onClick={() => setPicking(s)}
+                className="mt-3 grid h-9 w-9 place-items-center rounded-full text-black shadow-md active:scale-95"
+                style={{ backgroundColor: "var(--app-accent)" }}
+                aria-label={`Add ${s}`}
+              >
+                <Plus className="h-4 w-4" strokeWidth={3} />
+              </button>
+            </div>
+          ))}
+          {filtered.length === 0 && <p className="col-span-2 py-6 text-center text-xs text-white/40">No matches</p>}
+        </div>
+      )}
+
+      {(picking || editing) && (
+        <PairConfigModal
+          initial={editing ?? { symbol: picking!, lot: 0.01, trades: 1 }}
+          isEdit={!!editing}
+          onClose={() => { setPicking(null); setEditing(null); }}
+          onSave={(p) => {
+            setPairs((prev) => {
+              const others = prev.filter((x) => x.symbol !== p.symbol);
+              return [...others, p];
+            });
+            toast.success(`${p.symbol} saved to My Pairs`);
+            setPicking(null); setEditing(null);
+            setTab("mine");
+          }}
+        />
+      )}
     </div>
   );
 }
+
+function PairConfigModal({ initial, isEdit, onClose, onSave }: { initial: Pair; isEdit: boolean; onClose: () => void; onSave: (p: Pair) => void }) {
+  const [lot, setLot] = useState<string>(String(initial.lot));
+  const [trades, setTrades] = useState<string>(String(initial.trades));
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const l = Number(lot);
+    const t = Math.floor(Number(trades));
+    if (!Number.isFinite(l) || l <= 0) { toast.error("Enter a valid lot size"); return; }
+    if (!Number.isFinite(t) || t < 1) { toast.error("Enter at least 1 trade"); return; }
+    onSave({ symbol: initial.symbol, lot: l, trades: t });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-5" onClick={onClose}>
+      <form onClick={(e) => e.stopPropagation()} onSubmit={submit} className="w-full max-w-sm rounded-2xl bg-[#0b1224] p-5 ring-1 ring-white/10">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold">{initial.symbol}</h2>
+            <p className="text-[11px] text-white/50">{isEdit ? "Edit pair settings" : "Configure this pair"}</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-md p-1 text-white/60 hover:bg-white/10">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <label className="mb-3 block">
+          <span className="mb-1 block text-[11px] uppercase tracking-wider text-white/50">Lot size</span>
+          <input
+            value={lot}
+            onChange={(e) => setLot(e.target.value)}
+            inputMode="decimal"
+            placeholder="0.01"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
+          />
+        </label>
+        <label className="mb-4 block">
+          <span className="mb-1 block text-[11px] uppercase tracking-wider text-white/50">Number of trades</span>
+          <input
+            value={trades}
+            onChange={(e) => setTrades(e.target.value.replace(/[^\d]/g, ""))}
+            inputMode="numeric"
+            placeholder="1"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
+          />
+        </label>
+        <button type="submit" className="w-full rounded-xl py-3 text-sm font-bold text-black" style={{ backgroundColor: "var(--app-accent)" }}>
+          Save
+        </button>
+      </form>
+    </div>
+  );
+}
+
 
 function Stat({ label, value, valueClass = "" }: { label: string; value: string; valueClass?: string }) {
   return (
@@ -969,7 +1183,7 @@ const PRESET_COLORS = [
 ];
 
 function SettingsScreen({
-  session, onLogout, accent, onAccent, bgVideo, onBgVideo,
+  session, onLogout, accent, onAccent, bgVideo, onBgVideo, style, onStyle,
 }: {
   session: Session;
   onLogout: () => void;
@@ -977,6 +1191,8 @@ function SettingsScreen({
   onAccent: (c: string) => void;
   bgVideo: string;
   onBgVideo: (url: string) => void;
+  style: UIStyle;
+  onStyle: (s: Partial<UIStyle>) => void;
 }) {
   const videoInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -997,6 +1213,33 @@ function SettingsScreen({
   return (
     <div className="px-5 pt-4">
       <h1 className="text-xl font-bold">Settings</h1>
+
+      {/* Interface style */}
+      <div className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+        <div className="flex items-center gap-2">
+          <SettingsIcon className="h-4 w-4" style={{ color: accent }} />
+          <span className="text-sm font-semibold">Interface style</span>
+        </div>
+        <StyleRow
+          label="Home"
+          value={style.home}
+          onChange={(v) => onStyle({ home: v as UIStyle["home"] })}
+          options={[{ v: "classic", l: "Classic" }, { v: "minimal", l: "Minimal" }, { v: "neon", l: "Neon" }]}
+        />
+        <StyleRow
+          label="Bottom navigation"
+          value={style.nav}
+          onChange={(v) => onStyle({ nav: v as UIStyle["nav"] })}
+          options={[{ v: "icons", l: "Icons" }, { v: "labels", l: "Labels" }, { v: "pill", l: "Pill" }]}
+        />
+        <StyleRow
+          label="Trading style"
+          value={style.trading}
+          onChange={(v) => onStyle({ trading: v as UIStyle["trading"] })}
+          options={[{ v: "scalping", l: "Scalping" }, { v: "day", l: "Day" }, { v: "swing", l: "Swing" }]}
+        />
+      </div>
+
 
       {/* Theme color */}
       <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
@@ -1119,9 +1362,30 @@ function HelpScreen() {
 
 type TabId = "home" | "symbols" | "metatrader" | "scanner" | "settings" | "help";
 
+function StyleRow({ label, value, options, onChange }: { label: string; value: string; options: { v: string; l: string }[]; onChange: (v: string) => void }) {
+  return (
+    <div>
+      <p className="mb-1.5 text-[11px] uppercase tracking-wider text-white/50">{label}</p>
+      <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-white/[0.04] p-1">
+        {options.map((o) => (
+          <button
+            key={o.v}
+            type="button"
+            onClick={() => onChange(o.v)}
+            className={`rounded-lg px-2 py-2 text-xs font-semibold transition ${value === o.v ? "bg-[var(--app-accent)] text-black" : "text-white/60"}`}
+          >
+            {o.l}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
 function BottomNav({
-  tab, setTab,
-}: { tab: string; setTab: (t: TabId) => void }) {
+  tab, setTab, style,
+}: { tab: string; setTab: (t: TabId) => void; style: UIStyle }) {
   const items: { id: TabId; icon: typeof Home; label: string }[] = [
     { id: "home", icon: Home, label: "Home" },
     { id: "symbols", icon: LineChart, label: "Symbols" },
@@ -1130,20 +1394,22 @@ function BottomNav({
     { id: "settings", icon: SettingsIcon, label: "Settings" },
     { id: "help", icon: HelpCircle, label: "Help" },
   ];
+  const showLabels = style.nav !== "icons";
+  const isPill = style.nav === "pill";
   return (
     <nav className="absolute inset-x-0 bottom-0 z-20 border-t border-white/10 px-1 pb-5 pt-2 backdrop-blur" style={{ backgroundColor: "color-mix(in oklab, var(--app-bg) 92%, black)" }}>
-      <div className="flex items-center justify-around">
+      <div className={`flex items-center justify-around ${isPill ? "mx-2 rounded-full bg-white/[0.06] px-1 py-1" : ""}`}>
         {items.map(({ id, icon: Icon, label }) => {
           const active = tab === id;
           return (
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[9px] transition ${active ? "" : "text-white/50"}`}
-              style={active ? { color: "var(--app-accent)" } : undefined}
+              className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[9px] transition ${active ? "" : "text-white/50"} ${isPill && active ? "bg-[var(--app-accent)] text-black" : ""}`}
+              style={active && !isPill ? { color: "var(--app-accent)" } : undefined}
             >
               <Icon className="h-5 w-5" />
-              {label}
+              {showLabels && label}
             </button>
           );
         })}
