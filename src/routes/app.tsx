@@ -1382,7 +1382,6 @@ function StyleRow({ label, value, options, onChange }: { label: string; value: s
   );
 }
 
-type TabId = "home" | "symbols" | "metatrader" | "scanner" | "settings" | "help";
 
 function BottomNav({
   tab, setTab, style,
