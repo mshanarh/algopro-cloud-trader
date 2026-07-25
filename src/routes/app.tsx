@@ -754,79 +754,176 @@ function PillBtn({ icon, label, onClick }: { icon: React.ReactNode; label: strin
   );
 }
 
-function SymbolsScreen({ session }: { session: Session }) {
-  const [selected, setSelected] = useState<string | null>(null);
-  const symbols = session.symbols.length ? session.symbols : ["EURUSD", "XAUUSD", "GBPUSD", "BTCUSD"];
+const DEFAULT_AVAILABLE = [
+  "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "NZDUSD", "USDCAD",
+  "EURGBP", "EURJPY", "GBPJPY", "AUDJPY", "CHFJPY",
+  "XAUUSD", "XAGUSD", "XAUUSD.m",
+  "BTCUSD", "ETHUSD", "BTCUSD.m", "BTCUSDm",
+  "US30", "NAS100", "SPX500", "GER40", "UK100",
+];
 
-  // Stable per-symbol mock stats so each tap shows consistent info
-  const stats = useMemo(() => {
-    const r = (seed: number) => {
-      let x = seed;
-      return () => {
-        x = (x * 9301 + 49297) % 233280;
-        return x / 233280;
-      };
-    };
-    const map: Record<string, { trades: number; lot: number; side: "BUY" | "SELL"; pnl: number }> = {};
-    for (const s of symbols) {
-      const seed = [...s].reduce((a, c) => a + c.charCodeAt(0), 0);
-      const rnd = r(seed);
-      map[s] = {
-        trades: Math.floor(rnd() * 18) + 2,
-        lot: +(rnd() * 0.5 + 0.01).toFixed(2),
-        side: rnd() > 0.5 ? "BUY" : "SELL",
-        pnl: +(rnd() * 160 - 40).toFixed(2),
-      };
-    }
-    return map;
-  }, [symbols.join(",")]);
+function SymbolsScreen({ session, pairs, setPairs }: { session: Session; pairs: Pair[]; setPairs: (fn: (p: Pair[]) => Pair[]) => void }) {
+  const [tab, setTab] = useState<"mine" | "available">("mine");
+  const [query, setQuery] = useState("");
+  const [picking, setPicking] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Pair | null>(null);
 
-  if (selected) {
-    const s = stats[selected];
-    return (
-      <div className="px-5 pt-5">
-        <button onClick={() => setSelected(null)} className="mb-3 inline-flex items-center gap-1 text-xs text-white/60">
-          <ArrowLeft className="h-3.5 w-3.5" /> Back
-        </button>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">{selected}</h2>
-            <span className={`rounded-full px-3 py-1 text-xs font-bold ${s.side === "BUY" ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300"}`}>
-              {s.side}
-            </span>
-          </div>
-          <div className="mt-4 grid grid-cols-3 gap-3 text-center">
-            <Stat label="Trades" value={String(s.trades)} />
-            <Stat label="Lot size" value={s.lot.toFixed(2)} />
-            <Stat label="P&L" value={`${s.pnl >= 0 ? "+" : ""}${s.pnl.toFixed(2)}`} valueClass={s.pnl >= 0 ? "text-emerald-300" : "text-rose-300"} />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const available = useMemo(() => {
+    const merged = Array.from(new Set([...(session.symbols || []), ...DEFAULT_AVAILABLE]));
+    return merged.filter((s) => !pairs.some((p) => p.symbol === s));
+  }, [session.symbols, pairs]);
+
+  const filtered = (tab === "available" ? available : pairs.map((p) => p.symbol))
+    .filter((s) => s.toLowerCase().includes(query.trim().toLowerCase()));
+
+  const remove = (sym: string) => {
+    setPairs((prev) => prev.filter((p) => p.symbol !== sym));
+    toast.success(`Removed ${sym}`);
+  };
 
   return (
     <div className="px-5 pt-5">
-      <h1 className="text-xl font-bold">Symbols</h1>
-      <p className="text-xs text-white/50">Tap a symbol to see trades and direction</p>
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        {symbols.map((s) => (
-          <button
-            key={s}
-            onClick={() => setSelected(s)}
-            className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left active:scale-[0.98]"
-          >
-            <div className="flex items-center gap-2">
-              <LineChart className="h-4 w-4" style={{ color: "var(--app-accent)" }} />
-              <span className="font-semibold">{s}</span>
-            </div>
-            <p className="mt-2 text-[10px] uppercase tracking-wider text-emerald-300">Active</p>
-          </button>
-        ))}
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold">Trading Pairs</h1>
       </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl bg-white/[0.06] p-1">
+        <button
+          onClick={() => setTab("mine")}
+          className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition ${tab === "mine" ? "bg-[var(--app-accent)] text-black" : "text-white/60"}`}
+        >
+          My Pairs <span className="rounded-md bg-black/20 px-1.5 py-0.5 text-[10px]">{pairs.length}</span>
+        </button>
+        <button
+          onClick={() => setTab("available")}
+          className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition ${tab === "available" ? "bg-[var(--app-accent)] text-black" : "text-white/60"}`}
+        >
+          Available <span className="rounded-md bg-black/20 px-1.5 py-0.5 text-[10px]">{available.length}</span>
+        </button>
+      </div>
+
+      <div className="mt-4 flex items-center gap-2 rounded-xl bg-white/[0.06] px-3 py-2.5">
+        <BarChart3 className="h-4 w-4 text-white/40" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search symbols"
+          className="flex-1 bg-transparent text-sm outline-none placeholder:text-white/40"
+        />
+      </div>
+
+      {tab === "mine" ? (
+        <div className="mt-4 space-y-2">
+          {pairs.length === 0 && (
+            <p className="py-6 text-center text-xs text-white/40">No pairs yet. Open Available to add one.</p>
+          )}
+          {pairs.filter((p) => p.symbol.toLowerCase().includes(query.trim().toLowerCase())).map((p) => (
+            <div key={p.symbol} className="flex items-center justify-between rounded-2xl bg-white/[0.04] p-4 ring-1 ring-white/5">
+              <div>
+                <p className="text-base font-bold">{p.symbol}</p>
+                <p className="mt-0.5 text-[11px] text-white/50">Lot {p.lot.toFixed(2)} · {p.trades} trades</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setEditing(p)} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold">Edit</button>
+                <button onClick={() => remove(p.symbol)} className="grid h-8 w-8 place-items-center rounded-lg bg-rose-500/20 text-rose-300"><X className="h-4 w-4" /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {filtered.map((s) => (
+            <div key={s} className="rounded-2xl bg-white/[0.04] p-4 ring-1 ring-white/5">
+              <p className="text-base font-bold">{s}</p>
+              <p className="mt-1 text-[11px] text-white/40">min 0.01</p>
+              <button
+                onClick={() => setPicking(s)}
+                className="mt-3 grid h-9 w-9 place-items-center rounded-full text-black shadow-md active:scale-95"
+                style={{ backgroundColor: "var(--app-accent)" }}
+                aria-label={`Add ${s}`}
+              >
+                <Plus className="h-4 w-4" strokeWidth={3} />
+              </button>
+            </div>
+          ))}
+          {filtered.length === 0 && <p className="col-span-2 py-6 text-center text-xs text-white/40">No matches</p>}
+        </div>
+      )}
+
+      {(picking || editing) && (
+        <PairConfigModal
+          initial={editing ?? { symbol: picking!, lot: 0.01, trades: 1 }}
+          isEdit={!!editing}
+          onClose={() => { setPicking(null); setEditing(null); }}
+          onSave={(p) => {
+            setPairs((prev) => {
+              const others = prev.filter((x) => x.symbol !== p.symbol);
+              return [...others, p];
+            });
+            toast.success(`${p.symbol} saved to My Pairs`);
+            setPicking(null); setEditing(null);
+            setTab("mine");
+          }}
+        />
+      )}
     </div>
   );
 }
+
+function PairConfigModal({ initial, isEdit, onClose, onSave }: { initial: Pair; isEdit: boolean; onClose: () => void; onSave: (p: Pair) => void }) {
+  const [lot, setLot] = useState<string>(String(initial.lot));
+  const [trades, setTrades] = useState<string>(String(initial.trades));
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const l = Number(lot);
+    const t = Math.floor(Number(trades));
+    if (!Number.isFinite(l) || l <= 0) { toast.error("Enter a valid lot size"); return; }
+    if (!Number.isFinite(t) || t < 1) { toast.error("Enter at least 1 trade"); return; }
+    onSave({ symbol: initial.symbol, lot: l, trades: t });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-5" onClick={onClose}>
+      <form onClick={(e) => e.stopPropagation()} onSubmit={submit} className="w-full max-w-sm rounded-2xl bg-[#0b1224] p-5 ring-1 ring-white/10">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold">{initial.symbol}</h2>
+            <p className="text-[11px] text-white/50">{isEdit ? "Edit pair settings" : "Configure this pair"}</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-md p-1 text-white/60 hover:bg-white/10">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <label className="mb-3 block">
+          <span className="mb-1 block text-[11px] uppercase tracking-wider text-white/50">Lot size</span>
+          <input
+            value={lot}
+            onChange={(e) => setLot(e.target.value)}
+            inputMode="decimal"
+            placeholder="0.01"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
+          />
+        </label>
+        <label className="mb-4 block">
+          <span className="mb-1 block text-[11px] uppercase tracking-wider text-white/50">Number of trades</span>
+          <input
+            value={trades}
+            onChange={(e) => setTrades(e.target.value.replace(/[^\d]/g, ""))}
+            inputMode="numeric"
+            placeholder="1"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
+          />
+        </label>
+        <button type="submit" className="w-full rounded-xl py-3 text-sm font-bold text-black" style={{ backgroundColor: "var(--app-accent)" }}>
+          Save
+        </button>
+      </form>
+    </div>
+  );
+}
+
 
 function Stat({ label, value, valueClass = "" }: { label: string; value: string; valueClass?: string }) {
   return (
