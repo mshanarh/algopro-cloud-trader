@@ -186,6 +186,8 @@ function AppRouter() {
   const [tab, setTab] = useState<"home" | "symbols" | "metatrader" | "scanner" | "settings" | "help">("home");
   const [accent, setAccent] = useState<string>("#22d3ee");
   const [bgVideo, setBgVideo] = useState<string>("");
+  const [style, setStyle] = useState<UIStyle>(DEFAULT_STYLE);
+  const [pairs, setPairs] = useState<Pair[]>([]);
 
   useEffect(() => {
     try {
@@ -197,61 +199,29 @@ function AppRouter() {
       if (t) setAccent(t);
       const v = localStorage.getItem(VIDEO_KEY);
       if (v) setBgVideo(v);
+      const st = localStorage.getItem(STYLE_KEY);
+      if (st) setStyle({ ...DEFAULT_STYLE, ...JSON.parse(st) });
+      const p = localStorage.getItem(PAIRS_KEY);
+      if (p) setPairs(JSON.parse(p));
     } catch {}
   }, []);
 
-  const onMentor = (m: Mentor) => { setMentor(m); localStorage.setItem(MENTOR_KEY, JSON.stringify(m)); };
-  const onLogin = (s: Session) => { setSession(s); localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); };
-  const onLogout = () => {
-    setSession(null);
-    localStorage.removeItem(STORAGE_KEY);
-    setTab("home");
+  const updateStyle = (s: Partial<UIStyle>) => {
+    setStyle((prev) => {
+      const next = { ...prev, ...s };
+      localStorage.setItem(STYLE_KEY, JSON.stringify(next));
+      return next;
+    });
   };
-  const onSignOutAll = () => {
-    setSession(null); setMentor(null);
-    localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(MENTOR_KEY);
-    setTab("home");
+  const updatePairs = (fn: (p: Pair[]) => Pair[]) => {
+    setPairs((prev) => {
+      const next = fn(prev);
+      localStorage.setItem(PAIRS_KEY, JSON.stringify(next));
+      return next;
+    });
   };
-  const updateAccent = (c: string) => { setAccent(c); localStorage.setItem(THEME_KEY, c); };
-  const updateVideo = (url: string) => {
-    setBgVideo(url);
-    if (url) localStorage.setItem(VIDEO_KEY, url);
-    else localStorage.removeItem(VIDEO_KEY);
-  };
-
-  const bgTint = useMemo(
-    () => `color-mix(in oklab, ${accent} 14%, #06080f)`,
-    [accent],
-  );
-
-  return (
-    <div
-      className="relative flex h-full flex-col text-white"
-      style={{
-        ["--app-accent" as any]: accent,
-        ["--app-bg" as any]: bgTint,
-        backgroundColor: "var(--app-bg)",
-      }}
-    >
-      {bgVideo && (
-        <video
-          key={bgVideo}
-          src={bgVideo}
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-40"
-        />
-      )}
-      <div className="pointer-events-none absolute inset-0" style={{ backgroundColor: "color-mix(in oklab, var(--app-bg) 70%, transparent)" }} />
-
-      <StatusBar />
-      <div className="relative z-10 flex-1 overflow-y-auto pb-24">
-        {!mentor && <MentorGate onSuccess={onMentor} />}
-        {mentor && !session && <LicenseGate mentor={mentor} onSuccess={onLogin} onSignOut={onSignOutAll} />}
-        {mentor && session && tab === "home" && <HomeScreen session={session} onDelete={onLogout} />}
-        {mentor && session && tab === "symbols" && <SymbolsScreen session={session} />}
+        {mentor && session && tab === "home" && <HomeScreen session={session} onDelete={onLogout} style={style} pairs={pairs} />}
+        {mentor && session && tab === "symbols" && <SymbolsScreen session={session} pairs={pairs} setPairs={updatePairs} />}
         {mentor && session && tab === "metatrader" && <MetaTraderScreen />}
         {mentor && session && tab === "scanner" && <ScannerScreen session={session} />}
         {mentor && session && tab === "settings" && (
@@ -262,11 +232,13 @@ function AppRouter() {
             onAccent={updateAccent}
             bgVideo={bgVideo}
             onBgVideo={updateVideo}
+            style={style}
+            onStyle={updateStyle}
           />
         )}
         {mentor && session && tab === "help" && <HelpScreen />}
       </div>
-      {mentor && session && <BottomNav tab={tab} setTab={setTab} />}
+      {mentor && session && <BottomNav tab={tab} setTab={setTab} style={style} />}
     </div>
   );
 }
