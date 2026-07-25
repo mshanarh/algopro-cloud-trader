@@ -396,7 +396,12 @@ function LicenseGate({ mentor, onSuccess, onSignOut }: { mentor: Mentor; onSucce
 }
 
 function HomeScreen({ session, onDelete }: { session: Session; onDelete: () => void }) {
-  const [running, setRunning] = useState(true);
+  const [running, setRunning] = useState(false);
+  const [card, setCard] = useState(false);
+  const [logsOpen, setLogsOpen] = useState(false);
+
+  const openCard = () => setCard(true);
+  const closeCard = () => { setCard(false); setLogsOpen(false); };
 
   const toggle = () => {
     setRunning((r) => {
@@ -422,8 +427,10 @@ function HomeScreen({ session, onDelete }: { session: Session; onDelete: () => v
 
       <div className="relative mt-2">
         <div className="absolute -inset-3 rounded-full blur-2xl" style={{ background: `color-mix(in oklab, var(--app-accent) 30%, transparent)` }} />
-        <div
-          className="relative h-56 w-56 overflow-hidden rounded-full ring-2"
+        <button
+          type="button"
+          onClick={openCard}
+          className="relative h-56 w-56 overflow-hidden rounded-full ring-2 active:scale-[0.98] transition"
           style={{
             borderColor: "var(--app-accent)",
             boxShadow: `0 0 60px -10px var(--app-accent)`,
@@ -436,7 +443,7 @@ function HomeScreen({ session, onDelete }: { session: Session; onDelete: () => v
               <Bot className="h-20 w-20 text-cyan-300" />
             </div>
           )}
-        </div>
+        </button>
         <div className="absolute -bottom-3 left-1/2 -translate-x-1/2">
           <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold ${running ? "bg-black text-white ring-1 ring-emerald-400/40" : "bg-black text-white/60 ring-1 ring-white/10"}`}>
             <span className={`h-1.5 w-1.5 rounded-full ${running ? "bg-emerald-400 animate-pulse" : "bg-white/30"}`} />
@@ -459,7 +466,7 @@ function HomeScreen({ session, onDelete }: { session: Session; onDelete: () => v
       <div className="relative mt-8 flex w-full max-w-[320px] items-center justify-around rounded-full bg-white py-3 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)]">
         <PillBtn icon={<Trash2 className="h-5 w-5" />} label="DELETE" onClick={handleDelete} />
         <button
-          onClick={toggle}
+          onClick={openCard}
           className={`grid h-14 w-14 place-items-center rounded-full text-white shadow-lg transition active:scale-95 ${
             running ? "bg-red-600 shadow-red-500/50" : "bg-emerald-500 shadow-emerald-500/50"
           }`}
@@ -472,11 +479,96 @@ function HomeScreen({ session, onDelete }: { session: Session; onDelete: () => v
         {running ? "STOP" : "START"}
       </p>
 
-      <TradeLogs running={running} symbols={session.symbols} />
-
       <p className="mt-6 text-[10px] tracking-[0.35em] text-white/30">
         POWERED BY: ALGOPRO
       </p>
+
+      {card && (
+        <TradeCard
+          session={session}
+          running={running}
+          onToggle={toggle}
+          onClose={closeCard}
+          logsOpen={logsOpen}
+          setLogsOpen={setLogsOpen}
+        />
+      )}
+    </div>
+  );
+}
+
+function TradeCard({
+  session, running, onToggle, onClose, logsOpen, setLogsOpen,
+}: {
+  session: Session; running: boolean; onToggle: () => void; onClose: () => void;
+  logsOpen: boolean; setLogsOpen: (v: boolean) => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-sm overflow-hidden rounded-3xl bg-slate-900 text-white ring-1 ring-white/10 shadow-2xl"
+      >
+        <div className="relative h-56 w-full">
+          {session.ea_image ? (
+            <img src={session.ea_image} alt={session.ea_name} className="absolute inset-0 h-full w-full object-cover" />
+          ) : (
+            <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-cyan-600 to-blue-800">
+              <Bot className="h-16 w-16 text-white/80" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
+          <button
+            onClick={onClose}
+            className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-slate-800/90 text-white ring-1 ring-white/20"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <div className="absolute bottom-3 left-4 right-4 text-left">
+            <h2 className="text-2xl font-extrabold leading-tight">{session.ea_name}</h2>
+            <p className="mt-0.5 text-sm font-semibold text-white/80">
+              {session.username} <span>💰📶</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="px-5 pb-5 pt-4 text-left">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            Server: <span className="text-emerald-400">Connected</span>
+          </p>
+
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <button
+              onClick={onToggle}
+              className="flex items-center justify-center gap-2 rounded-full bg-red-500 py-3 text-sm font-bold text-white shadow-lg shadow-red-500/40 active:scale-[0.98]"
+            >
+              {running ? <Square className="h-4 w-4 fill-white" /> : <Play className="h-4 w-4 fill-white" />}
+              {running ? "Stop Trade" : "Start Trade"}
+            </button>
+            <button
+              onClick={() => setLogsOpen(!logsOpen)}
+              className="flex items-center justify-center gap-2 rounded-full bg-slate-800 py-3 text-sm font-bold text-white ring-1 ring-white/10 active:scale-[0.98]"
+            >
+              <FileText className="h-4 w-4" />
+              {logsOpen ? "Hide Logs" : "Show Logs"}
+            </button>
+          </div>
+
+          <div className="mt-4 flex justify-end">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500 px-3 py-1 text-[11px] font-bold text-white">
+              Powered by <span className="font-extrabold">ALGOPRO</span>
+            </span>
+          </div>
+
+          {logsOpen && (
+            <div className="mt-4">
+              <TradeLogs running={running} symbols={session.symbols} />
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
