@@ -55,6 +55,25 @@ const MENTOR_KEY = "algopro.mentor";
 const THEME_KEY = "algopro.theme";
 const VIDEO_KEY = "algopro.bgvideo";
 const BROKER_KEY = "algopro.broker";
+const PAIRS_KEY = "algopro.pairs";
+const STYLE_KEY = "algopro.style";
+
+type Pair = { symbol: string; lot: number; trades: number };
+type UIStyle = { home: "classic" | "minimal" | "neon"; nav: "icons" | "labels" | "pill"; trading: "scalping" | "day" | "swing" };
+const DEFAULT_STYLE: UIStyle = { home: "classic", nav: "icons", trading: "day" };
+
+function speak(text: string) {
+  try {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-US"; u.rate = 0.95; u.pitch = 1;
+    const voices = window.speechSynthesis.getVoices();
+    const en = voices.find((v) => v.lang?.startsWith("en"));
+    if (en) u.voice = en;
+    window.speechSynthesis.speak(u);
+  } catch {}
+}
 
 function PhoneApp() {
   return (
