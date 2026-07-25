@@ -1183,7 +1183,7 @@ const PRESET_COLORS = [
 ];
 
 function SettingsScreen({
-  session, onLogout, accent, onAccent, bgVideo, onBgVideo,
+  session, onLogout, accent, onAccent, bgVideo, onBgVideo, style, onStyle,
 }: {
   session: Session;
   onLogout: () => void;
@@ -1191,6 +1191,8 @@ function SettingsScreen({
   onAccent: (c: string) => void;
   bgVideo: string;
   onBgVideo: (url: string) => void;
+  style: UIStyle;
+  onStyle: (s: Partial<UIStyle>) => void;
 }) {
   const videoInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -1211,6 +1213,33 @@ function SettingsScreen({
   return (
     <div className="px-5 pt-4">
       <h1 className="text-xl font-bold">Settings</h1>
+
+      {/* Interface style */}
+      <div className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+        <div className="flex items-center gap-2">
+          <SettingsIcon className="h-4 w-4" style={{ color: accent }} />
+          <span className="text-sm font-semibold">Interface style</span>
+        </div>
+        <StyleRow
+          label="Home"
+          value={style.home}
+          onChange={(v) => onStyle({ home: v as UIStyle["home"] })}
+          options={[{ v: "classic", l: "Classic" }, { v: "minimal", l: "Minimal" }, { v: "neon", l: "Neon" }]}
+        />
+        <StyleRow
+          label="Bottom navigation"
+          value={style.nav}
+          onChange={(v) => onStyle({ nav: v as UIStyle["nav"] })}
+          options={[{ v: "icons", l: "Icons" }, { v: "labels", l: "Labels" }, { v: "pill", l: "Pill" }]}
+        />
+        <StyleRow
+          label="Trading style"
+          value={style.trading}
+          onChange={(v) => onStyle({ trading: v as UIStyle["trading"] })}
+          options={[{ v: "scalping", l: "Scalping" }, { v: "day", l: "Day" }, { v: "swing", l: "Swing" }]}
+        />
+      </div>
+
 
       {/* Theme color */}
       <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
