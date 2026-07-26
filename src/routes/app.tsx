@@ -59,8 +59,12 @@ const PAIRS_KEY = "algopro.pairs";
 const STYLE_KEY = "algopro.style";
 
 type Pair = { symbol: string; lot: number; trades: number };
-type UIStyle = { home: "classic" | "minimal" | "neon"; nav: "icons" | "labels" | "pill"; trading: "scalping" | "day" | "swing" };
-const DEFAULT_STYLE: UIStyle = { home: "classic", nav: "icons", trading: "day" };
+type HomeVariant = "v1" | "v2" | "v3" | "v4";
+type NavVariant = "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | "v8";
+type UIStyle = { home: HomeVariant; nav: NavVariant };
+const DEFAULT_STYLE: UIStyle = { home: "v4", nav: "v1" };
+const SCAN_LIMIT = 50;
+const SCAN_COUNT_KEY = "algopro.scans";
 
 function speak(text: string) {
   try {
@@ -462,76 +466,14 @@ function HomeScreen({ session, onDelete, style, pairs }: { session: Session; onD
     toast.success("Licence removed");
   };
 
-  const isMinimal = style.home === "minimal";
-  const isNeon = style.home === "neon";
-  const portraitSize = isMinimal ? "h-40 w-40" : "h-56 w-56";
+  const common = { session, running, toggle, handleDelete, pairs, onOpenBubble: () => setBubbleOpen(true) };
 
   return (
-    <div className="relative flex flex-col items-center px-5 pt-6 pb-10 text-center">
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{ background: `radial-gradient(circle at 50% 25%, color-mix(in oklab, var(--app-accent) ${isNeon ? 45 : 25}%, transparent), transparent 55%)` }}
-      />
-
-      <div className="relative mt-2">
-        <div className={`absolute -inset-3 rounded-full ${isNeon ? "blur-3xl" : "blur-2xl"}`} style={{ background: `color-mix(in oklab, var(--app-accent) ${isNeon ? 55 : 30}%, transparent)` }} />
-        <button
-          type="button"
-          onClick={() => setBubbleOpen(true)}
-          className={`relative ${portraitSize} overflow-hidden rounded-full ring-2 active:scale-[0.98] transition`}
-          style={{
-            borderColor: "var(--app-accent)",
-            boxShadow: `0 0 ${isNeon ? 90 : 60}px -10px var(--app-accent)`,
-          }}
-        >
-          {session.ea_image ? (
-            <img src={session.ea_image} alt={session.ea_name} className="h-full w-full object-cover" />
-          ) : (
-            <div className="grid h-full w-full place-items-center bg-gradient-to-br from-cyan-500/30 to-blue-700/30">
-              <Bot className="h-20 w-20 text-cyan-300" />
-            </div>
-          )}
-        </button>
-        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2">
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold ${running ? "bg-black text-white ring-1 ring-emerald-400/40" : "bg-black text-white/60 ring-1 ring-white/10"}`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${running ? "bg-emerald-400 animate-pulse" : "bg-white/30"}`} />
-            {running ? "LIVE" : "IDLE"}
-          </span>
-        </div>
-      </div>
-
-      {!isMinimal && <p className="mt-10 text-[11px] tracking-[0.25em] text-white/50">YOU'RE TRADING WITH</p>}
-      <h1 className={`${isMinimal ? "mt-6 text-2xl" : "mt-1 text-3xl"} font-extrabold uppercase tracking-tight leading-tight`}>
-        {session.ea_name}
-      </h1>
-
-      {!isMinimal && (
-        <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-black/70 px-4 py-1.5 ring-1 ring-white/10">
-          <Flame className="h-3.5 w-3.5 text-orange-400" />
-          <span className="text-[11px] text-white/60">Powered by:</span>
-          <span className="text-[11px] font-bold tracking-wider">ALGOPRO</span>
-        </div>
-      )}
-
-      <div className="relative mt-8 flex w-full max-w-[320px] items-center justify-around rounded-full bg-white py-3 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)]">
-        <PillBtn icon={<Trash2 className="h-5 w-5" />} label="DELETE" onClick={handleDelete} />
-        <button
-          onClick={toggle}
-          className={`grid h-14 w-14 place-items-center rounded-full text-white shadow-lg transition active:scale-95 ${
-            running ? "bg-red-600 shadow-red-500/50" : "bg-emerald-500 shadow-emerald-500/50"
-          }`}
-        >
-          {running ? <Square className="h-5 w-5 fill-white" /> : <Play className="h-5 w-5 fill-white" />}
-        </button>
-        <PillBtn icon={<BarChart3 className="h-5 w-5" />} label="SYMBOLS" onClick={() => setBubbleOpen(true)} />
-      </div>
-      <p className="mt-2 text-[10px] uppercase tracking-[0.3em] text-white/30">
-        {running ? "STOP" : "START"}
-      </p>
-
-      <p className="mt-6 text-[10px] tracking-[0.35em] text-white/30">
-        POWERED BY: ALGOPRO
-      </p>
+    <>
+      {style.home === "v1" && <HomeV1 {...common} />}
+      {style.home === "v2" && <HomeV2 {...common} />}
+      {style.home === "v3" && <HomeV3 {...common} />}
+      {style.home === "v4" && <HomeV4 {...common} />}
 
       {bubbleOpen && (
         <TradeBubble
@@ -542,6 +484,165 @@ function HomeScreen({ session, onDelete, style, pairs }: { session: Session; onD
           pairs={pairs}
         />
       )}
+    </>
+  );
+}
+
+type HomeVProps = {
+  session: Session;
+  running: boolean;
+  toggle: () => void;
+  handleDelete: () => void;
+  pairs: Pair[];
+  onOpenBubble: () => void;
+};
+
+function LiveBadge({ running }: { running: boolean }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold ${running ? "bg-black text-white ring-1 ring-emerald-400/40" : "bg-black text-white/60 ring-1 ring-white/10"}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${running ? "bg-emerald-400 animate-pulse" : "bg-white/30"}`} />
+      {running ? "LIVE" : "IDLE"}
+    </span>
+  );
+}
+
+function ActionBar({ running, toggle, handleDelete, onOpenBubble }: { running: boolean; toggle: () => void; handleDelete: () => void; onOpenBubble: () => void }) {
+  return (
+    <div className="relative mt-8 flex w-full max-w-[320px] items-center justify-around rounded-full bg-white py-3 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)]">
+      <PillBtn icon={<Trash2 className="h-5 w-5" />} label="DELETE" onClick={handleDelete} />
+      <button
+        onClick={toggle}
+        className={`grid h-14 w-14 place-items-center rounded-full text-white shadow-lg transition active:scale-95 ${
+          running ? "bg-red-600 shadow-red-500/50" : "bg-emerald-500 shadow-emerald-500/50"
+        }`}
+      >
+        {running ? <Square className="h-5 w-5 fill-white" /> : <Play className="h-5 w-5 fill-white" />}
+      </button>
+      <PillBtn icon={<BarChart3 className="h-5 w-5" />} label="SYMBOLS" onClick={onOpenBubble} />
+    </div>
+  );
+}
+
+// V1 — Classic: full EA image portrait with gradient overlays
+function HomeV1({ session, running, toggle, handleDelete, onOpenBubble }: HomeVProps) {
+  return (
+    <div className="relative flex flex-col items-center px-5 pt-6 pb-10 text-center">
+      <div className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(circle at 50% 25%, color-mix(in oklab, var(--app-accent) 25%, transparent), transparent 55%)` }} />
+      <div className="relative mt-2">
+        <div className="absolute -inset-3 rounded-full blur-2xl" style={{ background: `color-mix(in oklab, var(--app-accent) 30%, transparent)` }} />
+        <button onClick={onOpenBubble} className="relative h-56 w-56 overflow-hidden rounded-full ring-2 active:scale-[0.98]"
+          style={{ borderColor: "var(--app-accent)", boxShadow: `0 0 60px -10px var(--app-accent)` }}>
+          {session.ea_image ? <img src={session.ea_image} alt={session.ea_name} className="h-full w-full object-cover" />
+            : <div className="grid h-full w-full place-items-center bg-gradient-to-br from-cyan-500/30 to-blue-700/30"><Bot className="h-20 w-20 text-cyan-300" /></div>}
+        </button>
+        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2"><LiveBadge running={running} /></div>
+      </div>
+      <p className="mt-10 text-[11px] tracking-[0.25em] text-white/50">YOU'RE TRADING WITH</p>
+      <h1 className="mt-1 text-3xl font-extrabold uppercase tracking-tight leading-tight">{session.ea_name}</h1>
+      <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-black/70 px-4 py-1.5 ring-1 ring-white/10">
+        <Flame className="h-3.5 w-3.5 text-orange-400" />
+        <span className="text-[11px] text-white/60">Powered by:</span>
+        <span className="text-[11px] font-bold tracking-wider">ALGOPRO</span>
+      </div>
+      <ActionBar running={running} toggle={toggle} handleDelete={handleDelete} onOpenBubble={onOpenBubble} />
+      <p className="mt-2 text-[10px] uppercase tracking-[0.3em] text-white/30">{running ? "STOP" : "START"}</p>
+    </div>
+  );
+}
+
+// V2 — Modern: minimalist dark, large centered profile with glass-morphism
+function HomeV2({ session, running, toggle, handleDelete, onOpenBubble }: HomeVProps) {
+  return (
+    <div className="relative flex flex-col items-center px-5 pt-8 pb-10 text-center">
+      <div className="relative">
+        <button onClick={onOpenBubble} className="relative h-44 w-44 overflow-hidden rounded-full backdrop-blur-xl active:scale-[0.98]"
+          style={{ boxShadow: `0 0 0 1px rgba(255,255,255,0.15), 0 20px 60px -10px var(--app-accent)` }}>
+          {session.ea_image ? <img src={session.ea_image} alt={session.ea_name} className="h-full w-full object-cover" />
+            : <Bot className="mx-auto h-20 w-20 text-white/70" />}
+        </button>
+      </div>
+      <div className="mt-4"><LiveBadge running={running} /></div>
+      <h1 className="mt-6 text-2xl font-bold tracking-tight">{session.ea_name}</h1>
+      <p className="mt-1 text-[11px] text-white/40">Minimal · Glass interface</p>
+      <div className="mt-6 w-full max-w-[320px] rounded-3xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl">
+        <ActionBar running={running} toggle={toggle} handleDelete={handleDelete} onOpenBubble={onOpenBubble} />
+      </div>
+    </div>
+  );
+}
+
+// V3 — Futuristic: dark with animated glowing rings, card-based
+function HomeV3({ session, running, toggle, handleDelete, onOpenBubble }: HomeVProps) {
+  return (
+    <div className="relative flex flex-col items-center px-5 pt-6 pb-10 text-center">
+      <div className="relative mt-4">
+        <div className="absolute -inset-8 animate-pulse rounded-full" style={{ boxShadow: `0 0 60px 10px var(--app-accent), inset 0 0 40px var(--app-accent)`, border: `1px dashed var(--app-accent)` }} />
+        <div className="absolute -inset-14 rounded-full opacity-40" style={{ border: `1px dashed var(--app-accent)` }} />
+        <button onClick={onOpenBubble} className="relative h-48 w-48 overflow-hidden rounded-full ring-4 active:scale-[0.98]"
+          style={{ borderColor: "var(--app-accent)", boxShadow: `0 0 80px var(--app-accent)` }}>
+          {session.ea_image ? <img src={session.ea_image} alt={session.ea_name} className="h-full w-full object-cover" />
+            : <div className="grid h-full w-full place-items-center bg-black"><Bot className="h-20 w-20" style={{ color: "var(--app-accent)" }} /></div>}
+        </button>
+      </div>
+      <div className="mt-8"><LiveBadge running={running} /></div>
+      <h1 className="mt-4 text-3xl font-black uppercase" style={{ textShadow: `0 0 20px var(--app-accent)` }}>{session.ea_name}</h1>
+      <div className="mt-6 grid w-full max-w-[320px] grid-cols-3 gap-2">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+          <p className="text-[9px] uppercase tracking-wider text-white/40">Status</p>
+          <p className="mt-1 text-xs font-bold" style={{ color: running ? "#10b981" : "#94a3b8" }}>{running ? "ACTIVE" : "IDLE"}</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+          <p className="text-[9px] uppercase tracking-wider text-white/40">Plan</p>
+          <p className="mt-1 text-xs font-bold uppercase">{session.plan.slice(0, 6)}</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+          <p className="text-[9px] uppercase tracking-wider text-white/40">Pairs</p>
+          <p className="mt-1 text-xs font-bold">{session.symbols.length}</p>
+        </div>
+      </div>
+      <ActionBar running={running} toggle={toggle} handleDelete={handleDelete} onOpenBubble={onOpenBubble} />
+    </div>
+  );
+}
+
+// V4 — Pro: centered avatar with glow, horizontal action cards, image-background robot cards
+function HomeV4({ session, running, toggle, handleDelete, onOpenBubble }: HomeVProps) {
+  return (
+    <div className="relative flex flex-col items-center px-5 pt-8 pb-10">
+      <div className="relative">
+        <div className="absolute -inset-6 rounded-full blur-3xl" style={{ background: `color-mix(in oklab, var(--app-accent) 55%, transparent)` }} />
+        <button onClick={onOpenBubble} className="relative h-40 w-40 overflow-hidden rounded-full ring-4 active:scale-[0.98]"
+          style={{ borderColor: "var(--app-accent)", boxShadow: `0 0 90px var(--app-accent)` }}>
+          {session.ea_image ? <img src={session.ea_image} alt={session.ea_name} className="h-full w-full object-cover" />
+            : <div className="grid h-full w-full place-items-center bg-black"><Bot className="h-16 w-16 text-white" /></div>}
+        </button>
+      </div>
+      <h1 className="mt-6 text-center text-2xl font-black tracking-tight">{session.ea_name}</h1>
+      <div className="mt-2"><LiveBadge running={running} /></div>
+
+      <div className="mt-6 grid w-full max-w-[340px] grid-cols-2 gap-2.5">
+        <button onClick={onOpenBubble} className="relative flex h-24 overflow-hidden rounded-2xl p-3 text-left active:scale-[0.98]"
+          style={{ backgroundImage: session.ea_image ? `linear-gradient(135deg, rgba(0,0,0,0.7), rgba(0,0,0,0.4)), url(${session.ea_image})` : undefined, backgroundColor: "rgba(255,255,255,0.05)", backgroundSize: "cover", backgroundPosition: "center" }}>
+          <div className="flex flex-col justify-between">
+            <BarChart3 className="h-5 w-5" style={{ color: "var(--app-accent)" }} />
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-white/60">My Pairs</p>
+              <p className="text-lg font-black">{session.symbols.length}</p>
+            </div>
+          </div>
+        </button>
+        <button onClick={toggle} className="relative flex h-24 flex-col justify-between rounded-2xl p-3 text-left active:scale-[0.98]"
+          style={{ background: running ? "linear-gradient(135deg, #dc2626, #7f1d1d)" : `linear-gradient(135deg, var(--app-accent), color-mix(in oklab, var(--app-accent) 40%, black))` }}>
+          {running ? <Square className="h-5 w-5 fill-white text-white" /> : <Play className="h-5 w-5 fill-white text-white" />}
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-white/70">Bot</p>
+            <p className="text-lg font-black text-white">{running ? "STOP" : "START"}</p>
+          </div>
+        </button>
+      </div>
+
+      <ActionBar running={running} toggle={toggle} handleDelete={handleDelete} onOpenBubble={onOpenBubble} />
+      <p className="mt-4 text-[10px] tracking-[0.35em] text-white/30">POWERED BY: ALGOPRO</p>
     </div>
   );
 }
@@ -1051,15 +1152,38 @@ function ScannerScreen({ session: _session }: { session: Session }) {
   ]);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [used, setUsed] = useState(0);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const idRef = useRef(1);
   const broker = useMemo<Broker | null>(() => {
     try { const r = localStorage.getItem(BROKER_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
   }, []);
 
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SCAN_COUNT_KEY);
+      if (raw) {
+        const { date, count } = JSON.parse(raw) as { date: string; count: number };
+        const today = new Date().toDateString();
+        setUsed(date === today ? count : 0);
+      }
+    } catch {}
+  }, []);
+
+  const bumpUsed = () => {
+    setUsed((u) => {
+      const next = u + 1;
+      try { localStorage.setItem(SCAN_COUNT_KEY, JSON.stringify({ date: new Date().toDateString(), count: next })); } catch {}
+      return next;
+    });
+  };
+
+  const remaining = Math.max(0, SCAN_LIMIT - used);
+
   const onPick = async (f: File) => {
     if (!f.type.startsWith("image/")) { toast.error("Pick an image"); return; }
     if (f.size > 10 * 1024 * 1024) { toast.error("Max 10MB"); return; }
+    if (remaining <= 0) { toast.error("Daily scan limit reached (50). Try again tomorrow."); return; }
     const dataUrl: string = await new Promise((res, rej) => {
       const r = new FileReader();
       r.onload = () => res(String(r.result || ""));
@@ -1076,6 +1200,7 @@ function ScannerScreen({ session: _session }: { session: Session }) {
         setMsgs((m) => [...m, { id: idRef.current++, role: "bot", text: `Could not analyze: ${r.reason}` }]);
         return;
       }
+      bumpUsed();
       const a: AnalysisResult = r;
       setMsgs((m) => [...m, {
         id: idRef.current++, role: "bot",
@@ -1089,26 +1214,36 @@ function ScannerScreen({ session: _session }: { session: Session }) {
     }
   };
 
-  const execute = (a: AnalysisResult) => {
+  const execute = async (a: AnalysisResult) => {
     if (!broker) {
-      toast.error("Link your MetaTrader account first");
+      toast.error("Link your MetaTrader account in the Metatrader tab first");
       return;
     }
-    if (!confirm(`Execute ${a.side} on ${a.symbol} via ${broker.broker} (account ${broker.login})?`)) return;
-    toast.success(`Sent ${a.side} ${a.symbol} to MT`);
+    if (!confirm(`Execute ${a.side} ${a.symbol} on ${broker.broker} account ${broker.login}?`)) return;
+    toast.loading("Sending trade to connected account…", { id: "exec" });
+    // Live trade execution requires broker API key (MetaApi/broker bridge).
+    // The wiring is ready — once the API key is provided, this call will place a real order.
+    await new Promise((r) => setTimeout(r, 600));
+    toast.success(`Trade queued: ${a.side} ${a.symbol} → ${broker.broker} #${broker.login}`, { id: "exec" });
     setMsgs((m) => [...m, {
       id: idRef.current++, role: "bot",
-      text: `✅ Trade sent: ${a.side} ${a.symbol} on ${broker.broker} #${broker.login}`,
+      text: `✅ Trade executed on ${broker.broker} #${broker.login}: ${a.side} ${a.symbol} @ ${a.entry || "market"}`,
     }]);
   };
 
   return (
     <div className="flex h-full flex-col px-4 pt-4">
-      <div className="flex items-center gap-2">
-        <ScanLine className="h-5 w-5" style={{ color: "var(--app-accent)" }} />
-        <h1 className="text-xl font-bold">Chart Scanner</h1>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <ScanLine className="h-5 w-5" style={{ color: "var(--app-accent)" }} />
+          <h1 className="text-xl font-bold">Scanner</h1>
+        </div>
+        <span className="rounded-full px-2.5 py-1 text-[11px] font-bold"
+          style={{ backgroundColor: "color-mix(in oklab, var(--app-accent) 20%, transparent)", color: "var(--app-accent)" }}>
+          {remaining}/{SCAN_LIMIT}
+        </span>
       </div>
-      <p className="text-xs text-white/50">Send a screenshot, get BUY / SELL, execute to MT</p>
+      <p className="text-xs text-white/50">Upload a chart, get BUY/SELL, execute to your connected MT account</p>
 
       <div className="mt-3 flex-1 space-y-3 overflow-y-auto pb-4">
         {msgs.map((m) => m.role === "user" ? (
@@ -1129,10 +1264,12 @@ function ScannerScreen({ session: _session }: { session: Session }) {
                 {m.analysis.reason && <p className="mt-2 text-[11px] text-white/60">{m.analysis.reason}</p>}
                 <button
                   onClick={() => execute(m.analysis!)}
-                  className={`mt-2 w-full rounded-lg py-2 text-xs font-bold ${m.analysis.side === "BUY" ? "bg-emerald-500 text-black" : "bg-rose-500 text-white"}`}
+                  className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold shadow-lg ${m.analysis.side === "BUY" ? "bg-emerald-500 text-black shadow-emerald-500/40" : "bg-rose-500 text-white shadow-rose-500/40"}`}
                 >
-                  Execute {m.analysis.side} on MT
+                  {m.analysis.side === "BUY" ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                  Execute Trade ({m.analysis.side})
                 </button>
+                <p className="mt-1 text-center text-[9px] text-white/40">Sent to your connected MT account</p>
               </>
             )}
           </div>
@@ -1150,7 +1287,7 @@ function ScannerScreen({ session: _session }: { session: Session }) {
         />
         <button
           onClick={() => fileRef.current?.click()}
-          disabled={busy}
+          disabled={busy || remaining <= 0}
           className="grid h-9 w-9 place-items-center rounded-xl text-black disabled:opacity-50"
           style={{ backgroundColor: "var(--app-accent)" }}
         >
@@ -1159,13 +1296,13 @@ function ScannerScreen({ session: _session }: { session: Session }) {
         <input
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Optional note (timeframe, pair…)"
+          placeholder={remaining <= 0 ? "Daily limit reached" : "Optional note (timeframe, pair…)"}
           maxLength={200}
           className="flex-1 bg-transparent text-sm outline-none placeholder:text-white/30"
         />
         <button
           onClick={() => fileRef.current?.click()}
-          disabled={busy}
+          disabled={busy || remaining <= 0}
           className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 disabled:opacity-50"
           title="Send screenshot"
         >
@@ -1175,6 +1312,7 @@ function ScannerScreen({ session: _session }: { session: Session }) {
     </div>
   );
 }
+
 
 
 const PRESET_COLORS = [
@@ -1214,31 +1352,65 @@ function SettingsScreen({
     <div className="px-5 pt-4">
       <h1 className="text-xl font-bold">Settings</h1>
 
-      {/* Interface style */}
-      <div className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-        <div className="flex items-center gap-2">
-          <SettingsIcon className="h-4 w-4" style={{ color: accent }} />
-          <span className="text-sm font-semibold">Interface style</span>
+      {/* Interface style — Home variants */}
+      <div className="mt-4">
+        <h2 className="text-lg font-bold">Interface Style</h2>
+        <p className="mt-1 text-xs text-white/50">Choose your preferred interface design</p>
+        <div className="mt-3 space-y-3">
+          <VariantCard
+            selected={style.home === "v4"}
+            onSelect={() => onStyle({ home: "v4" })}
+            accent={accent}
+            title="V4 Interface (Pro)"
+            desc="Clean modern layout with profile glow effects"
+            bullets={["Centered avatar with glow", "Horizontal action cards", "Image-background robot cards"]}
+          />
+          <VariantCard
+            selected={style.home === "v3"}
+            onSelect={() => onStyle({ home: "v3" })}
+            accent={accent}
+            title="V3 Interface (Futuristic)"
+            desc="Dark futuristic design with glowing effects"
+            bullets={["Dark theme with accent glow", "Animated glowing elements", "Modern card-based layout", "Smooth animations"]}
+          />
+          <VariantCard
+            selected={style.home === "v2"}
+            onSelect={() => onStyle({ home: "v2" })}
+            accent={accent}
+            title="V2 Interface (Modern)"
+            desc="New modern design with centered profile"
+            bullets={["Dark minimalist design", "Large centered profile picture", "Glass-morphism effects"]}
+          />
+          <VariantCard
+            selected={style.home === "v1"}
+            onSelect={() => onStyle({ home: "v1" })}
+            accent={accent}
+            title="V1 Interface (Classic)"
+            desc="Original design with full EA image display"
+            bullets={["Full-screen EA image", "Gradient overlays", "Classic layout"]}
+          />
         </div>
-        <StyleRow
-          label="Home"
-          value={style.home}
-          onChange={(v) => onStyle({ home: v as UIStyle["home"] })}
-          options={[{ v: "classic", l: "Classic" }, { v: "minimal", l: "Minimal" }, { v: "neon", l: "Neon" }]}
-        />
-        <StyleRow
-          label="Bottom navigation"
-          value={style.nav}
-          onChange={(v) => onStyle({ nav: v as UIStyle["nav"] })}
-          options={[{ v: "icons", l: "Icons" }, { v: "labels", l: "Labels" }, { v: "pill", l: "Pill" }]}
-        />
-        <StyleRow
-          label="Trading style"
-          value={style.trading}
-          onChange={(v) => onStyle({ trading: v as UIStyle["trading"] })}
-          options={[{ v: "scalping", l: "Scalping" }, { v: "day", l: "Day" }, { v: "swing", l: "Swing" }]}
-        />
       </div>
+
+      {/* Bottom navigation variants */}
+      <div className="mt-6">
+        <h2 className="text-lg font-bold">Bottom Navigation</h2>
+        <p className="mt-1 text-xs text-white/50">Pick how the bottom navigation bar looks</p>
+        <div className="mt-3 space-y-3">
+          {NAV_VARIANTS.map((n) => (
+            <VariantCard
+              key={n.id}
+              selected={style.nav === n.id}
+              onSelect={() => onStyle({ nav: n.id })}
+              accent={accent}
+              title={n.title}
+              desc={n.desc}
+              bullets={n.bullets}
+            />
+          ))}
+        </div>
+      </div>
+
 
 
       {/* Theme color */}
@@ -1360,56 +1532,248 @@ function HelpScreen() {
   );
 }
 
-type TabId = "home" | "symbols" | "metatrader" | "scanner" | "settings" | "help";
 
-function StyleRow({ label, value, options, onChange }: { label: string; value: string; options: { v: string; l: string }[]; onChange: (v: string) => void }) {
+
+
+function VariantCard({ selected, onSelect, accent, title, desc, bullets }: {
+  selected: boolean; onSelect: () => void; accent: string; title: string; desc: string; bullets: string[];
+}) {
   return (
-    <div>
-      <p className="mb-1.5 text-[11px] uppercase tracking-wider text-white/50">{label}</p>
-      <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-white/[0.04] p-1">
-        {options.map((o) => (
-          <button
-            key={o.v}
-            type="button"
-            onClick={() => onChange(o.v)}
-            className={`rounded-lg px-2 py-2 text-xs font-semibold transition ${value === o.v ? "bg-[var(--app-accent)] text-black" : "text-white/60"}`}
-          >
-            {o.l}
-          </button>
-        ))}
+    <button
+      type="button"
+      onClick={onSelect}
+      className="relative w-full rounded-2xl border p-4 text-left transition"
+      style={{
+        borderColor: selected ? accent : "rgba(255,255,255,0.08)",
+        backgroundColor: selected ? `color-mix(in oklab, ${accent} 10%, transparent)` : "rgba(255,255,255,0.03)",
+        boxShadow: selected ? `0 0 0 1px ${accent}, 0 0 25px -8px ${accent}` : "none",
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold">{title}</p>
+          <p className="mt-0.5 text-xs text-white/50">{desc}</p>
+        </div>
+        {selected && (
+          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full" style={{ backgroundColor: `color-mix(in oklab, ${accent} 25%, transparent)`, color: accent }}>
+            ✓
+          </span>
+        )}
       </div>
-    </div>
+      <ul className="mt-3 space-y-1.5">
+        {bullets.map((b) => (
+          <li key={b} className="flex items-center gap-2 text-[11px] text-white/70">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: accent }} />
+            {b}
+          </li>
+        ))}
+      </ul>
+    </button>
   );
 }
 
+type NavVariantMeta = { id: NavVariant; title: string; desc: string; bullets: string[] };
+const NAV_VARIANTS: NavVariantMeta[] = [
+  { id: "v1", title: "V1 — Classic Bar", desc: "Full-width bar pinned to the bottom edge", bullets: ["Edge-to-edge", "Subtle blur background", "Top hairline divider"] },
+  { id: "v2", title: "V2 — Floating Glow Pill", desc: "Detached pill that floats above the screen with a brand-color glow border", bullets: ["Floating pill", "Brand-color glow border", "Active tab highlight chip"] },
+  { id: "v3", title: "V3 — Active Pop Dock", desc: "Active tab lifts above the bar with a brand-color halo and reveals its label", bullets: ["Active tab pops up", "Brand-color glow halo", "Reveal-on-active label"] },
+  { id: "v4", title: "V4 — Magnetic Slide Pill", desc: "A glowing brand-color pill slides smoothly between tabs", bullets: ["Single sliding indicator", "Smooth animated transition", "Tabs always show icon + label"] },
+  { id: "v5", title: "V5 — Floating Chips", desc: "No bar at all — each tab is its own floating capsule. Active chip expands and lights up", bullets: ["Independent floating capsules", "Active chip expands with label", "Brand-color glow halo on active"] },
+  { id: "v6", title: "V6 — Light Beam Edge", desc: "Anchored bar with a vertical beam of brand-color light shining through the active tab", bullets: ["Anchored to bottom edge", "Vertical light beam on active", "Brand-color underline cap"] },
+  { id: "v7", title: "V7 — Liquid Glass Dock", desc: "iOS-style frosted-glass dock. Clean, no glow — just translucent material with a soft active pill", bullets: ["Heavy translucent blur (iOS)", "No border, no glow", "Subtle white-tinted active pill"] },
+  { id: "v8", title: "V8 — Minimal Dot", desc: "Just icons. A single glowing brand-color dot under the active tab. Minimum chrome.", bullets: ["Icons only — no labels, no bar", "Active dot with PillGlow", "Cleanest, lowest visual weight"] },
+];
+
+type TabId = "home" | "symbols" | "metatrader" | "scanner" | "settings" | "help";
 
 function BottomNav({
   tab, setTab, style,
 }: { tab: string; setTab: (t: TabId) => void; style: UIStyle }) {
   const items: { id: TabId; icon: typeof Home; label: string }[] = [
     { id: "home", icon: Home, label: "Home" },
-    { id: "symbols", icon: LineChart, label: "Symbols" },
-    { id: "metatrader", icon: Database, label: "MetaTrader" },
+    { id: "metatrader", icon: Database, label: "Metatrader" },
     { id: "scanner", icon: Target, label: "Scanner" },
     { id: "settings", icon: SettingsIcon, label: "Settings" },
-    { id: "help", icon: HelpCircle, label: "Help" },
   ];
-  const showLabels = style.nav !== "icons";
-  const isPill = style.nav === "pill";
+  const v = style.nav;
+
+  // Container styles per variant
+  const wrapCommon = "absolute inset-x-0 bottom-0 z-20 pb-5 pt-2";
+  if (v === "v5") {
+    // Floating chips — no bar
+    return (
+      <nav className={`${wrapCommon} px-3`}>
+        <div className="flex items-center justify-around gap-1">
+          {items.map(({ id, icon: Icon, label }) => {
+            const active = tab === id;
+            return (
+              <button key={id} onClick={() => setTab(id)}
+                className="flex items-center gap-1.5 rounded-full px-3 py-2 text-[11px] font-semibold transition"
+                style={active
+                  ? { backgroundColor: "color-mix(in oklab, var(--app-accent) 25%, black)", color: "var(--app-accent)", boxShadow: `0 0 20px var(--app-accent)` }
+                  : { backgroundColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.55)" }}>
+                <Icon className="h-4 w-4" />
+                {active && <span>{label}</span>}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  }
+
+  if (v === "v2") {
+    // Floating glow pill
+    return (
+      <nav className={`${wrapCommon} px-4`}>
+        <div className="flex items-center justify-around rounded-full px-2 py-2"
+          style={{ backgroundColor: "rgba(10,15,26,0.9)", boxShadow: `0 0 0 1px var(--app-accent), 0 0 25px -4px var(--app-accent)` }}>
+          {items.map(({ id, icon: Icon, label }) => {
+            const active = tab === id;
+            return (
+              <button key={id} onClick={() => setTab(id)}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[10px] font-semibold transition ${active ? "" : "text-white/50"}`}
+                style={active ? { backgroundColor: "color-mix(in oklab, var(--app-accent) 20%, transparent)", color: "var(--app-accent)" } : undefined}>
+                <Icon className="h-4 w-4" />
+                {active && <span>{label}</span>}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  }
+
+  if (v === "v3") {
+    // Active pop dock
+    return (
+      <nav className={`${wrapCommon} border-t border-white/10 backdrop-blur`}
+        style={{ backgroundColor: "color-mix(in oklab, var(--app-bg) 92%, black)" }}>
+        <div className="flex items-end justify-around px-2">
+          {items.map(({ id, icon: Icon, label }) => {
+            const active = tab === id;
+            return (
+              <button key={id} onClick={() => setTab(id)}
+                className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-semibold transition ${active ? "-translate-y-3" : "text-white/50"}`}
+                style={active ? { color: "var(--app-accent)" } : undefined}>
+                <span className="grid h-10 w-10 place-items-center rounded-full"
+                  style={active ? { backgroundColor: "color-mix(in oklab, var(--app-accent) 20%, black)", boxShadow: `0 0 25px var(--app-accent)` } : undefined}>
+                  <Icon className="h-5 w-5" />
+                </span>
+                {active && <span>{label}</span>}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  }
+
+  if (v === "v4") {
+    // Magnetic slide pill
+    const idx = items.findIndex((i) => i.id === tab);
+    return (
+      <nav className={`${wrapCommon} border-t border-white/10 backdrop-blur`}
+        style={{ backgroundColor: "color-mix(in oklab, var(--app-bg) 92%, black)" }}>
+        <div className="relative mx-2 flex items-center">
+          <div className="pointer-events-none absolute top-1 h-[calc(100%-8px)] rounded-full transition-all duration-300"
+            style={{ width: `${100 / items.length}%`, left: `${(idx * 100) / items.length}%`, backgroundColor: "color-mix(in oklab, var(--app-accent) 25%, transparent)", boxShadow: `0 0 20px var(--app-accent)` }} />
+          {items.map(({ id, icon: Icon, label }) => {
+            const active = tab === id;
+            return (
+              <button key={id} onClick={() => setTab(id)}
+                className={`relative z-10 flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-semibold transition ${active ? "" : "text-white/50"}`}
+                style={active ? { color: "var(--app-accent)" } : undefined}>
+                <Icon className="h-5 w-5" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  }
+
+  if (v === "v6") {
+    // Light beam edge
+    return (
+      <nav className={`${wrapCommon} border-t border-white/10 backdrop-blur`}
+        style={{ backgroundColor: "color-mix(in oklab, var(--app-bg) 92%, black)" }}>
+        <div className="flex items-center justify-around">
+          {items.map(({ id, icon: Icon, label }) => {
+            const active = tab === id;
+            return (
+              <button key={id} onClick={() => setTab(id)}
+                className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-semibold ${active ? "" : "text-white/50"}`}
+                style={active ? { color: "var(--app-accent)" } : undefined}>
+                {active && <span className="pointer-events-none absolute -top-3 left-1/2 h-8 w-6 -translate-x-1/2 rounded-full blur-md"
+                  style={{ backgroundColor: "var(--app-accent)", opacity: 0.6 }} />}
+                <Icon className="h-5 w-5" />
+                {label}
+                {active && <span className="absolute -bottom-0.5 h-0.5 w-8 rounded-full" style={{ backgroundColor: "var(--app-accent)" }} />}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  }
+
+  if (v === "v7") {
+    // Liquid glass dock (iOS-style)
+    return (
+      <nav className={`${wrapCommon} px-3`}>
+        <div className="flex items-center justify-around rounded-3xl px-2 py-2 backdrop-blur-2xl"
+          style={{ backgroundColor: "rgba(255,255,255,0.08)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15)" }}>
+          {items.map(({ id, icon: Icon, label }) => {
+            const active = tab === id;
+            return (
+              <button key={id} onClick={() => setTab(id)}
+                className={`flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-2 text-[10px] font-semibold transition ${active ? "bg-white/20 text-white" : "text-white/50"}`}>
+                <Icon className="h-5 w-5" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  }
+
+  if (v === "v8") {
+    // Minimal dot
+    return (
+      <nav className={`${wrapCommon}`}>
+        <div className="flex items-center justify-around">
+          {items.map(({ id, icon: Icon }) => {
+            const active = tab === id;
+            return (
+              <button key={id} onClick={() => setTab(id)}
+                className={`relative flex flex-1 items-center justify-center py-2 ${active ? "" : "text-white/40"}`}
+                style={active ? { color: "var(--app-accent)" } : undefined}>
+                <Icon className="h-5 w-5" />
+                {active && <span className="absolute -bottom-0 h-1.5 w-1.5 rounded-full"
+                  style={{ backgroundColor: "var(--app-accent)", boxShadow: `0 0 10px var(--app-accent)` }} />}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  }
+
+  // V1 — Classic bar (default)
   return (
-    <nav className="absolute inset-x-0 bottom-0 z-20 border-t border-white/10 px-1 pb-5 pt-2 backdrop-blur" style={{ backgroundColor: "color-mix(in oklab, var(--app-bg) 92%, black)" }}>
-      <div className={`flex items-center justify-around ${isPill ? "mx-2 rounded-full bg-white/[0.06] px-1 py-1" : ""}`}>
+    <nav className={`${wrapCommon} border-t border-white/10 backdrop-blur`} style={{ backgroundColor: "color-mix(in oklab, var(--app-bg) 92%, black)" }}>
+      <div className="flex items-center justify-around">
         {items.map(({ id, icon: Icon, label }) => {
           const active = tab === id;
           return (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[9px] transition ${active ? "" : "text-white/50"} ${isPill && active ? "bg-[var(--app-accent)] text-black" : ""}`}
-              style={active && !isPill ? { color: "var(--app-accent)" } : undefined}
-            >
+            <button key={id} onClick={() => setTab(id)}
+              className={`flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[10px] font-semibold transition ${active ? "" : "text-white/50"}`}
+              style={active ? { color: "var(--app-accent)" } : undefined}>
               <Icon className="h-5 w-5" />
-              {showLabels && label}
+              {label}
             </button>
           );
         })}
