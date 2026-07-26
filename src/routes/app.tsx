@@ -1315,31 +1315,65 @@ function SettingsScreen({
     <div className="px-5 pt-4">
       <h1 className="text-xl font-bold">Settings</h1>
 
-      {/* Interface style */}
-      <div className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-        <div className="flex items-center gap-2">
-          <SettingsIcon className="h-4 w-4" style={{ color: accent }} />
-          <span className="text-sm font-semibold">Interface style</span>
+      {/* Interface style — Home variants */}
+      <div className="mt-4">
+        <h2 className="text-lg font-bold">Interface Style</h2>
+        <p className="mt-1 text-xs text-white/50">Choose your preferred interface design</p>
+        <div className="mt-3 space-y-3">
+          <VariantCard
+            selected={style.home === "v4"}
+            onSelect={() => onStyle({ home: "v4" })}
+            accent={accent}
+            title="V4 Interface (Pro)"
+            desc="Clean modern layout with profile glow effects"
+            bullets={["Centered avatar with glow", "Horizontal action cards", "Image-background robot cards"]}
+          />
+          <VariantCard
+            selected={style.home === "v3"}
+            onSelect={() => onStyle({ home: "v3" })}
+            accent={accent}
+            title="V3 Interface (Futuristic)"
+            desc="Dark futuristic design with glowing effects"
+            bullets={["Dark theme with accent glow", "Animated glowing elements", "Modern card-based layout", "Smooth animations"]}
+          />
+          <VariantCard
+            selected={style.home === "v2"}
+            onSelect={() => onStyle({ home: "v2" })}
+            accent={accent}
+            title="V2 Interface (Modern)"
+            desc="New modern design with centered profile"
+            bullets={["Dark minimalist design", "Large centered profile picture", "Glass-morphism effects"]}
+          />
+          <VariantCard
+            selected={style.home === "v1"}
+            onSelect={() => onStyle({ home: "v1" })}
+            accent={accent}
+            title="V1 Interface (Classic)"
+            desc="Original design with full EA image display"
+            bullets={["Full-screen EA image", "Gradient overlays", "Classic layout"]}
+          />
         </div>
-        <StyleRow
-          label="Home"
-          value={style.home}
-          onChange={(v) => onStyle({ home: v as UIStyle["home"] })}
-          options={[{ v: "classic", l: "Classic" }, { v: "minimal", l: "Minimal" }, { v: "neon", l: "Neon" }]}
-        />
-        <StyleRow
-          label="Bottom navigation"
-          value={style.nav}
-          onChange={(v) => onStyle({ nav: v as UIStyle["nav"] })}
-          options={[{ v: "icons", l: "Icons" }, { v: "labels", l: "Labels" }, { v: "pill", l: "Pill" }]}
-        />
-        <StyleRow
-          label="Trading style"
-          value={style.trading}
-          onChange={(v) => onStyle({ trading: v as UIStyle["trading"] })}
-          options={[{ v: "scalping", l: "Scalping" }, { v: "day", l: "Day" }, { v: "swing", l: "Swing" }]}
-        />
       </div>
+
+      {/* Bottom navigation variants */}
+      <div className="mt-6">
+        <h2 className="text-lg font-bold">Bottom Navigation</h2>
+        <p className="mt-1 text-xs text-white/50">Pick how the bottom navigation bar looks</p>
+        <div className="mt-3 space-y-3">
+          {NAV_VARIANTS.map((n) => (
+            <VariantCard
+              key={n.id}
+              selected={style.nav === n.id}
+              onSelect={() => onStyle({ nav: n.id })}
+              accent={accent}
+              title={n.title}
+              desc={n.desc}
+              bullets={n.bullets}
+            />
+          ))}
+        </div>
+      </div>
+
 
 
       {/* Theme color */}
