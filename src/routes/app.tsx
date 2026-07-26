@@ -1495,7 +1495,8 @@ function HelpScreen() {
   );
 }
 
-type TabId = "home" | "symbols" | "metatrader" | "scanner" | "settings" | "help";
+
+
 
 function VariantCard({ selected, onSelect, accent, title, desc, bullets }: {
   selected: boolean; onSelect: () => void; accent: string; title: string; desc: string; bullets: string[];
