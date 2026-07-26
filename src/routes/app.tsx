@@ -59,8 +59,12 @@ const PAIRS_KEY = "algopro.pairs";
 const STYLE_KEY = "algopro.style";
 
 type Pair = { symbol: string; lot: number; trades: number };
-type UIStyle = { home: "classic" | "minimal" | "neon"; nav: "icons" | "labels" | "pill"; trading: "scalping" | "day" | "swing" };
-const DEFAULT_STYLE: UIStyle = { home: "classic", nav: "icons", trading: "day" };
+type HomeVariant = "v1" | "v2" | "v3" | "v4";
+type NavVariant = "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | "v8";
+type UIStyle = { home: HomeVariant; nav: NavVariant };
+const DEFAULT_STYLE: UIStyle = { home: "v4", nav: "v1" };
+const SCAN_LIMIT = 50;
+const SCAN_COUNT_KEY = "algopro.scans";
 
 function speak(text: string) {
   try {
