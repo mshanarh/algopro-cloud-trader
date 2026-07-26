@@ -1497,54 +1497,245 @@ function HelpScreen() {
 
 type TabId = "home" | "symbols" | "metatrader" | "scanner" | "settings" | "help";
 
-function StyleRow({ label, value, options, onChange }: { label: string; value: string; options: { v: string; l: string }[]; onChange: (v: string) => void }) {
+function VariantCard({ selected, onSelect, accent, title, desc, bullets }: {
+  selected: boolean; onSelect: () => void; accent: string; title: string; desc: string; bullets: string[];
+}) {
   return (
-    <div>
-      <p className="mb-1.5 text-[11px] uppercase tracking-wider text-white/50">{label}</p>
-      <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-white/[0.04] p-1">
-        {options.map((o) => (
-          <button
-            key={o.v}
-            type="button"
-            onClick={() => onChange(o.v)}
-            className={`rounded-lg px-2 py-2 text-xs font-semibold transition ${value === o.v ? "bg-[var(--app-accent)] text-black" : "text-white/60"}`}
-          >
-            {o.l}
-          </button>
-        ))}
+    <button
+      type="button"
+      onClick={onSelect}
+      className="relative w-full rounded-2xl border p-4 text-left transition"
+      style={{
+        borderColor: selected ? accent : "rgba(255,255,255,0.08)",
+        backgroundColor: selected ? `color-mix(in oklab, ${accent} 10%, transparent)` : "rgba(255,255,255,0.03)",
+        boxShadow: selected ? `0 0 0 1px ${accent}, 0 0 25px -8px ${accent}` : "none",
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold">{title}</p>
+          <p className="mt-0.5 text-xs text-white/50">{desc}</p>
+        </div>
+        {selected && (
+          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full" style={{ backgroundColor: `color-mix(in oklab, ${accent} 25%, transparent)`, color: accent }}>
+            ✓
+          </span>
+        )}
       </div>
-    </div>
+      <ul className="mt-3 space-y-1.5">
+        {bullets.map((b) => (
+          <li key={b} className="flex items-center gap-2 text-[11px] text-white/70">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: accent }} />
+            {b}
+          </li>
+        ))}
+      </ul>
+    </button>
   );
 }
 
+type NavVariantMeta = { id: NavVariant; title: string; desc: string; bullets: string[] };
+const NAV_VARIANTS: NavVariantMeta[] = [
+  { id: "v1", title: "V1 — Classic Bar", desc: "Full-width bar pinned to the bottom edge", bullets: ["Edge-to-edge", "Subtle blur background", "Top hairline divider"] },
+  { id: "v2", title: "V2 — Floating Glow Pill", desc: "Detached pill that floats above the screen with a brand-color glow border", bullets: ["Floating pill", "Brand-color glow border", "Active tab highlight chip"] },
+  { id: "v3", title: "V3 — Active Pop Dock", desc: "Active tab lifts above the bar with a brand-color halo and reveals its label", bullets: ["Active tab pops up", "Brand-color glow halo", "Reveal-on-active label"] },
+  { id: "v4", title: "V4 — Magnetic Slide Pill", desc: "A glowing brand-color pill slides smoothly between tabs", bullets: ["Single sliding indicator", "Smooth animated transition", "Tabs always show icon + label"] },
+  { id: "v5", title: "V5 — Floating Chips", desc: "No bar at all — each tab is its own floating capsule. Active chip expands and lights up", bullets: ["Independent floating capsules", "Active chip expands with label", "Brand-color glow halo on active"] },
+  { id: "v6", title: "V6 — Light Beam Edge", desc: "Anchored bar with a vertical beam of brand-color light shining through the active tab", bullets: ["Anchored to bottom edge", "Vertical light beam on active", "Brand-color underline cap"] },
+  { id: "v7", title: "V7 — Liquid Glass Dock", desc: "iOS-style frosted-glass dock. Clean, no glow — just translucent material with a soft active pill", bullets: ["Heavy translucent blur (iOS)", "No border, no glow", "Subtle white-tinted active pill"] },
+  { id: "v8", title: "V8 — Minimal Dot", desc: "Just icons. A single glowing brand-color dot under the active tab. Minimum chrome.", bullets: ["Icons only — no labels, no bar", "Active dot with PillGlow", "Cleanest, lowest visual weight"] },
+];
+
+type TabId = "home" | "symbols" | "metatrader" | "scanner" | "settings" | "help";
 
 function BottomNav({
   tab, setTab, style,
 }: { tab: string; setTab: (t: TabId) => void; style: UIStyle }) {
   const items: { id: TabId; icon: typeof Home; label: string }[] = [
     { id: "home", icon: Home, label: "Home" },
-    { id: "symbols", icon: LineChart, label: "Symbols" },
-    { id: "metatrader", icon: Database, label: "MetaTrader" },
+    { id: "metatrader", icon: Database, label: "Metatrader" },
     { id: "scanner", icon: Target, label: "Scanner" },
     { id: "settings", icon: SettingsIcon, label: "Settings" },
-    { id: "help", icon: HelpCircle, label: "Help" },
   ];
-  const showLabels = style.nav !== "icons";
-  const isPill = style.nav === "pill";
+  const v = style.nav;
+
+  // Container styles per variant
+  const wrapCommon = "absolute inset-x-0 bottom-0 z-20 pb-5 pt-2";
+  if (v === "v5") {
+    // Floating chips — no bar
+    return (
+      <nav className={`${wrapCommon} px-3`}>
+        <div className="flex items-center justify-around gap-1">
+          {items.map(({ id, icon: Icon, label }) => {
+            const active = tab === id;
+            return (
+              <button key={id} onClick={() => setTab(id)}
+                className="flex items-center gap-1.5 rounded-full px-3 py-2 text-[11px] font-semibold transition"
+                style={active
+                  ? { backgroundColor: "color-mix(in oklab, var(--app-accent) 25%, black)", color: "var(--app-accent)", boxShadow: `0 0 20px var(--app-accent)` }
+                  : { backgroundColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.55)" }}>
+                <Icon className="h-4 w-4" />
+                {active && <span>{label}</span>}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  }
+
+  if (v === "v2") {
+    // Floating glow pill
+    return (
+      <nav className={`${wrapCommon} px-4`}>
+        <div className="flex items-center justify-around rounded-full px-2 py-2"
+          style={{ backgroundColor: "rgba(10,15,26,0.9)", boxShadow: `0 0 0 1px var(--app-accent), 0 0 25px -4px var(--app-accent)` }}>
+          {items.map(({ id, icon: Icon, label }) => {
+            const active = tab === id;
+            return (
+              <button key={id} onClick={() => setTab(id)}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[10px] font-semibold transition ${active ? "" : "text-white/50"}`}
+                style={active ? { backgroundColor: "color-mix(in oklab, var(--app-accent) 20%, transparent)", color: "var(--app-accent)" } : undefined}>
+                <Icon className="h-4 w-4" />
+                {active && <span>{label}</span>}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  }
+
+  if (v === "v3") {
+    // Active pop dock
+    return (
+      <nav className={`${wrapCommon} border-t border-white/10 backdrop-blur`}
+        style={{ backgroundColor: "color-mix(in oklab, var(--app-bg) 92%, black)" }}>
+        <div className="flex items-end justify-around px-2">
+          {items.map(({ id, icon: Icon, label }) => {
+            const active = tab === id;
+            return (
+              <button key={id} onClick={() => setTab(id)}
+                className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-semibold transition ${active ? "-translate-y-3" : "text-white/50"}`}
+                style={active ? { color: "var(--app-accent)" } : undefined}>
+                <span className="grid h-10 w-10 place-items-center rounded-full"
+                  style={active ? { backgroundColor: "color-mix(in oklab, var(--app-accent) 20%, black)", boxShadow: `0 0 25px var(--app-accent)` } : undefined}>
+                  <Icon className="h-5 w-5" />
+                </span>
+                {active && <span>{label}</span>}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  }
+
+  if (v === "v4") {
+    // Magnetic slide pill
+    const idx = items.findIndex((i) => i.id === tab);
+    return (
+      <nav className={`${wrapCommon} border-t border-white/10 backdrop-blur`}
+        style={{ backgroundColor: "color-mix(in oklab, var(--app-bg) 92%, black)" }}>
+        <div className="relative mx-2 flex items-center">
+          <div className="pointer-events-none absolute top-1 h-[calc(100%-8px)] rounded-full transition-all duration-300"
+            style={{ width: `${100 / items.length}%`, left: `${(idx * 100) / items.length}%`, backgroundColor: "color-mix(in oklab, var(--app-accent) 25%, transparent)", boxShadow: `0 0 20px var(--app-accent)` }} />
+          {items.map(({ id, icon: Icon, label }) => {
+            const active = tab === id;
+            return (
+              <button key={id} onClick={() => setTab(id)}
+                className={`relative z-10 flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-semibold transition ${active ? "" : "text-white/50"}`}
+                style={active ? { color: "var(--app-accent)" } : undefined}>
+                <Icon className="h-5 w-5" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  }
+
+  if (v === "v6") {
+    // Light beam edge
+    return (
+      <nav className={`${wrapCommon} border-t border-white/10 backdrop-blur`}
+        style={{ backgroundColor: "color-mix(in oklab, var(--app-bg) 92%, black)" }}>
+        <div className="flex items-center justify-around">
+          {items.map(({ id, icon: Icon, label }) => {
+            const active = tab === id;
+            return (
+              <button key={id} onClick={() => setTab(id)}
+                className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-semibold ${active ? "" : "text-white/50"}`}
+                style={active ? { color: "var(--app-accent)" } : undefined}>
+                {active && <span className="pointer-events-none absolute -top-3 left-1/2 h-8 w-6 -translate-x-1/2 rounded-full blur-md"
+                  style={{ backgroundColor: "var(--app-accent)", opacity: 0.6 }} />}
+                <Icon className="h-5 w-5" />
+                {label}
+                {active && <span className="absolute -bottom-0.5 h-0.5 w-8 rounded-full" style={{ backgroundColor: "var(--app-accent)" }} />}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  }
+
+  if (v === "v7") {
+    // Liquid glass dock (iOS-style)
+    return (
+      <nav className={`${wrapCommon} px-3`}>
+        <div className="flex items-center justify-around rounded-3xl px-2 py-2 backdrop-blur-2xl"
+          style={{ backgroundColor: "rgba(255,255,255,0.08)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15)" }}>
+          {items.map(({ id, icon: Icon, label }) => {
+            const active = tab === id;
+            return (
+              <button key={id} onClick={() => setTab(id)}
+                className={`flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-2 text-[10px] font-semibold transition ${active ? "bg-white/20 text-white" : "text-white/50"}`}>
+                <Icon className="h-5 w-5" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  }
+
+  if (v === "v8") {
+    // Minimal dot
+    return (
+      <nav className={`${wrapCommon}`}>
+        <div className="flex items-center justify-around">
+          {items.map(({ id, icon: Icon }) => {
+            const active = tab === id;
+            return (
+              <button key={id} onClick={() => setTab(id)}
+                className={`relative flex flex-1 items-center justify-center py-2 ${active ? "" : "text-white/40"}`}
+                style={active ? { color: "var(--app-accent)" } : undefined}>
+                <Icon className="h-5 w-5" />
+                {active && <span className="absolute -bottom-0 h-1.5 w-1.5 rounded-full"
+                  style={{ backgroundColor: "var(--app-accent)", boxShadow: `0 0 10px var(--app-accent)` }} />}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    );
+  }
+
+  // V1 — Classic bar (default)
   return (
-    <nav className="absolute inset-x-0 bottom-0 z-20 border-t border-white/10 px-1 pb-5 pt-2 backdrop-blur" style={{ backgroundColor: "color-mix(in oklab, var(--app-bg) 92%, black)" }}>
-      <div className={`flex items-center justify-around ${isPill ? "mx-2 rounded-full bg-white/[0.06] px-1 py-1" : ""}`}>
+    <nav className={`${wrapCommon} border-t border-white/10 backdrop-blur`} style={{ backgroundColor: "color-mix(in oklab, var(--app-bg) 92%, black)" }}>
+      <div className="flex items-center justify-around">
         {items.map(({ id, icon: Icon, label }) => {
           const active = tab === id;
           return (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[9px] transition ${active ? "" : "text-white/50"} ${isPill && active ? "bg-[var(--app-accent)] text-black" : ""}`}
-              style={active && !isPill ? { color: "var(--app-accent)" } : undefined}
-            >
+            <button key={id} onClick={() => setTab(id)}
+              className={`flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[10px] font-semibold transition ${active ? "" : "text-white/50"}`}
+              style={active ? { color: "var(--app-accent)" } : undefined}>
               <Icon className="h-5 w-5" />
-              {showLabels && label}
+              {label}
             </button>
           );
         })}
