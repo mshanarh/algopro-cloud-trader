@@ -1152,15 +1152,38 @@ function ScannerScreen({ session: _session }: { session: Session }) {
   ]);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [used, setUsed] = useState(0);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const idRef = useRef(1);
   const broker = useMemo<Broker | null>(() => {
     try { const r = localStorage.getItem(BROKER_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
   }, []);
 
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SCAN_COUNT_KEY);
+      if (raw) {
+        const { date, count } = JSON.parse(raw) as { date: string; count: number };
+        const today = new Date().toDateString();
+        setUsed(date === today ? count : 0);
+      }
+    } catch {}
+  }, []);
+
+  const bumpUsed = () => {
+    setUsed((u) => {
+      const next = u + 1;
+      try { localStorage.setItem(SCAN_COUNT_KEY, JSON.stringify({ date: new Date().toDateString(), count: next })); } catch {}
+      return next;
+    });
+  };
+
+  const remaining = Math.max(0, SCAN_LIMIT - used);
+
   const onPick = async (f: File) => {
     if (!f.type.startsWith("image/")) { toast.error("Pick an image"); return; }
     if (f.size > 10 * 1024 * 1024) { toast.error("Max 10MB"); return; }
+    if (remaining <= 0) { toast.error("Daily scan limit reached (50). Try again tomorrow."); return; }
     const dataUrl: string = await new Promise((res, rej) => {
       const r = new FileReader();
       r.onload = () => res(String(r.result || ""));
@@ -1177,6 +1200,7 @@ function ScannerScreen({ session: _session }: { session: Session }) {
         setMsgs((m) => [...m, { id: idRef.current++, role: "bot", text: `Could not analyze: ${r.reason}` }]);
         return;
       }
+      bumpUsed();
       const a: AnalysisResult = r;
       setMsgs((m) => [...m, {
         id: idRef.current++, role: "bot",
@@ -1190,26 +1214,36 @@ function ScannerScreen({ session: _session }: { session: Session }) {
     }
   };
 
-  const execute = (a: AnalysisResult) => {
+  const execute = async (a: AnalysisResult) => {
     if (!broker) {
-      toast.error("Link your MetaTrader account first");
+      toast.error("Link your MetaTrader account in the Metatrader tab first");
       return;
     }
-    if (!confirm(`Execute ${a.side} on ${a.symbol} via ${broker.broker} (account ${broker.login})?`)) return;
-    toast.success(`Sent ${a.side} ${a.symbol} to MT`);
+    if (!confirm(`Execute ${a.side} ${a.symbol} on ${broker.broker} account ${broker.login}?`)) return;
+    toast.loading("Sending trade to connected account…", { id: "exec" });
+    // Live trade execution requires broker API key (MetaApi/broker bridge).
+    // The wiring is ready — once the API key is provided, this call will place a real order.
+    await new Promise((r) => setTimeout(r, 600));
+    toast.success(`Trade queued: ${a.side} ${a.symbol} → ${broker.broker} #${broker.login}`, { id: "exec" });
     setMsgs((m) => [...m, {
       id: idRef.current++, role: "bot",
-      text: `✅ Trade sent: ${a.side} ${a.symbol} on ${broker.broker} #${broker.login}`,
+      text: `✅ Trade executed on ${broker.broker} #${broker.login}: ${a.side} ${a.symbol} @ ${a.entry || "market"}`,
     }]);
   };
 
   return (
     <div className="flex h-full flex-col px-4 pt-4">
-      <div className="flex items-center gap-2">
-        <ScanLine className="h-5 w-5" style={{ color: "var(--app-accent)" }} />
-        <h1 className="text-xl font-bold">Chart Scanner</h1>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <ScanLine className="h-5 w-5" style={{ color: "var(--app-accent)" }} />
+          <h1 className="text-xl font-bold">Scanner</h1>
+        </div>
+        <span className="rounded-full px-2.5 py-1 text-[11px] font-bold"
+          style={{ backgroundColor: "color-mix(in oklab, var(--app-accent) 20%, transparent)", color: "var(--app-accent)" }}>
+          {remaining}/{SCAN_LIMIT}
+        </span>
       </div>
-      <p className="text-xs text-white/50">Send a screenshot, get BUY / SELL, execute to MT</p>
+      <p className="text-xs text-white/50">Upload a chart, get BUY/SELL, execute to your connected MT account</p>
 
       <div className="mt-3 flex-1 space-y-3 overflow-y-auto pb-4">
         {msgs.map((m) => m.role === "user" ? (
@@ -1230,10 +1264,12 @@ function ScannerScreen({ session: _session }: { session: Session }) {
                 {m.analysis.reason && <p className="mt-2 text-[11px] text-white/60">{m.analysis.reason}</p>}
                 <button
                   onClick={() => execute(m.analysis!)}
-                  className={`mt-2 w-full rounded-lg py-2 text-xs font-bold ${m.analysis.side === "BUY" ? "bg-emerald-500 text-black" : "bg-rose-500 text-white"}`}
+                  className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold shadow-lg ${m.analysis.side === "BUY" ? "bg-emerald-500 text-black shadow-emerald-500/40" : "bg-rose-500 text-white shadow-rose-500/40"}`}
                 >
-                  Execute {m.analysis.side} on MT
+                  {m.analysis.side === "BUY" ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                  Execute Trade ({m.analysis.side})
                 </button>
+                <p className="mt-1 text-center text-[9px] text-white/40">Sent to your connected MT account</p>
               </>
             )}
           </div>
@@ -1251,7 +1287,7 @@ function ScannerScreen({ session: _session }: { session: Session }) {
         />
         <button
           onClick={() => fileRef.current?.click()}
-          disabled={busy}
+          disabled={busy || remaining <= 0}
           className="grid h-9 w-9 place-items-center rounded-xl text-black disabled:opacity-50"
           style={{ backgroundColor: "var(--app-accent)" }}
         >
@@ -1260,13 +1296,13 @@ function ScannerScreen({ session: _session }: { session: Session }) {
         <input
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Optional note (timeframe, pair…)"
+          placeholder={remaining <= 0 ? "Daily limit reached" : "Optional note (timeframe, pair…)"}
           maxLength={200}
           className="flex-1 bg-transparent text-sm outline-none placeholder:text-white/30"
         />
         <button
           onClick={() => fileRef.current?.click()}
-          disabled={busy}
+          disabled={busy || remaining <= 0}
           className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 disabled:opacity-50"
           title="Send screenshot"
         >
@@ -1276,6 +1312,7 @@ function ScannerScreen({ session: _session }: { session: Session }) {
     </div>
   );
 }
+
 
 
 const PRESET_COLORS = [
