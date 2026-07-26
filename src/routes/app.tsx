@@ -466,76 +466,14 @@ function HomeScreen({ session, onDelete, style, pairs }: { session: Session; onD
     toast.success("Licence removed");
   };
 
-  const isMinimal = style.home === "minimal";
-  const isNeon = style.home === "neon";
-  const portraitSize = isMinimal ? "h-40 w-40" : "h-56 w-56";
+  const common = { session, running, toggle, handleDelete, pairs, onOpenBubble: () => setBubbleOpen(true) };
 
   return (
-    <div className="relative flex flex-col items-center px-5 pt-6 pb-10 text-center">
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{ background: `radial-gradient(circle at 50% 25%, color-mix(in oklab, var(--app-accent) ${isNeon ? 45 : 25}%, transparent), transparent 55%)` }}
-      />
-
-      <div className="relative mt-2">
-        <div className={`absolute -inset-3 rounded-full ${isNeon ? "blur-3xl" : "blur-2xl"}`} style={{ background: `color-mix(in oklab, var(--app-accent) ${isNeon ? 55 : 30}%, transparent)` }} />
-        <button
-          type="button"
-          onClick={() => setBubbleOpen(true)}
-          className={`relative ${portraitSize} overflow-hidden rounded-full ring-2 active:scale-[0.98] transition`}
-          style={{
-            borderColor: "var(--app-accent)",
-            boxShadow: `0 0 ${isNeon ? 90 : 60}px -10px var(--app-accent)`,
-          }}
-        >
-          {session.ea_image ? (
-            <img src={session.ea_image} alt={session.ea_name} className="h-full w-full object-cover" />
-          ) : (
-            <div className="grid h-full w-full place-items-center bg-gradient-to-br from-cyan-500/30 to-blue-700/30">
-              <Bot className="h-20 w-20 text-cyan-300" />
-            </div>
-          )}
-        </button>
-        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2">
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold ${running ? "bg-black text-white ring-1 ring-emerald-400/40" : "bg-black text-white/60 ring-1 ring-white/10"}`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${running ? "bg-emerald-400 animate-pulse" : "bg-white/30"}`} />
-            {running ? "LIVE" : "IDLE"}
-          </span>
-        </div>
-      </div>
-
-      {!isMinimal && <p className="mt-10 text-[11px] tracking-[0.25em] text-white/50">YOU'RE TRADING WITH</p>}
-      <h1 className={`${isMinimal ? "mt-6 text-2xl" : "mt-1 text-3xl"} font-extrabold uppercase tracking-tight leading-tight`}>
-        {session.ea_name}
-      </h1>
-
-      {!isMinimal && (
-        <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-black/70 px-4 py-1.5 ring-1 ring-white/10">
-          <Flame className="h-3.5 w-3.5 text-orange-400" />
-          <span className="text-[11px] text-white/60">Powered by:</span>
-          <span className="text-[11px] font-bold tracking-wider">ALGOPRO</span>
-        </div>
-      )}
-
-      <div className="relative mt-8 flex w-full max-w-[320px] items-center justify-around rounded-full bg-white py-3 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)]">
-        <PillBtn icon={<Trash2 className="h-5 w-5" />} label="DELETE" onClick={handleDelete} />
-        <button
-          onClick={toggle}
-          className={`grid h-14 w-14 place-items-center rounded-full text-white shadow-lg transition active:scale-95 ${
-            running ? "bg-red-600 shadow-red-500/50" : "bg-emerald-500 shadow-emerald-500/50"
-          }`}
-        >
-          {running ? <Square className="h-5 w-5 fill-white" /> : <Play className="h-5 w-5 fill-white" />}
-        </button>
-        <PillBtn icon={<BarChart3 className="h-5 w-5" />} label="SYMBOLS" onClick={() => setBubbleOpen(true)} />
-      </div>
-      <p className="mt-2 text-[10px] uppercase tracking-[0.3em] text-white/30">
-        {running ? "STOP" : "START"}
-      </p>
-
-      <p className="mt-6 text-[10px] tracking-[0.35em] text-white/30">
-        POWERED BY: ALGOPRO
-      </p>
+    <>
+      {style.home === "v1" && <HomeV1 {...common} />}
+      {style.home === "v2" && <HomeV2 {...common} />}
+      {style.home === "v3" && <HomeV3 {...common} />}
+      {style.home === "v4" && <HomeV4 {...common} />}
 
       {bubbleOpen && (
         <TradeBubble
@@ -546,6 +484,165 @@ function HomeScreen({ session, onDelete, style, pairs }: { session: Session; onD
           pairs={pairs}
         />
       )}
+    </>
+  );
+}
+
+type HomeVProps = {
+  session: Session;
+  running: boolean;
+  toggle: () => void;
+  handleDelete: () => void;
+  pairs: Pair[];
+  onOpenBubble: () => void;
+};
+
+function LiveBadge({ running }: { running: boolean }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold ${running ? "bg-black text-white ring-1 ring-emerald-400/40" : "bg-black text-white/60 ring-1 ring-white/10"}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${running ? "bg-emerald-400 animate-pulse" : "bg-white/30"}`} />
+      {running ? "LIVE" : "IDLE"}
+    </span>
+  );
+}
+
+function ActionBar({ running, toggle, handleDelete, onOpenBubble }: { running: boolean; toggle: () => void; handleDelete: () => void; onOpenBubble: () => void }) {
+  return (
+    <div className="relative mt-8 flex w-full max-w-[320px] items-center justify-around rounded-full bg-white py-3 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)]">
+      <PillBtn icon={<Trash2 className="h-5 w-5" />} label="DELETE" onClick={handleDelete} />
+      <button
+        onClick={toggle}
+        className={`grid h-14 w-14 place-items-center rounded-full text-white shadow-lg transition active:scale-95 ${
+          running ? "bg-red-600 shadow-red-500/50" : "bg-emerald-500 shadow-emerald-500/50"
+        }`}
+      >
+        {running ? <Square className="h-5 w-5 fill-white" /> : <Play className="h-5 w-5 fill-white" />}
+      </button>
+      <PillBtn icon={<BarChart3 className="h-5 w-5" />} label="SYMBOLS" onClick={onOpenBubble} />
+    </div>
+  );
+}
+
+// V1 — Classic: full EA image portrait with gradient overlays
+function HomeV1({ session, running, toggle, handleDelete, onOpenBubble }: HomeVProps) {
+  return (
+    <div className="relative flex flex-col items-center px-5 pt-6 pb-10 text-center">
+      <div className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(circle at 50% 25%, color-mix(in oklab, var(--app-accent) 25%, transparent), transparent 55%)` }} />
+      <div className="relative mt-2">
+        <div className="absolute -inset-3 rounded-full blur-2xl" style={{ background: `color-mix(in oklab, var(--app-accent) 30%, transparent)` }} />
+        <button onClick={onOpenBubble} className="relative h-56 w-56 overflow-hidden rounded-full ring-2 active:scale-[0.98]"
+          style={{ borderColor: "var(--app-accent)", boxShadow: `0 0 60px -10px var(--app-accent)` }}>
+          {session.ea_image ? <img src={session.ea_image} alt={session.ea_name} className="h-full w-full object-cover" />
+            : <div className="grid h-full w-full place-items-center bg-gradient-to-br from-cyan-500/30 to-blue-700/30"><Bot className="h-20 w-20 text-cyan-300" /></div>}
+        </button>
+        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2"><LiveBadge running={running} /></div>
+      </div>
+      <p className="mt-10 text-[11px] tracking-[0.25em] text-white/50">YOU'RE TRADING WITH</p>
+      <h1 className="mt-1 text-3xl font-extrabold uppercase tracking-tight leading-tight">{session.ea_name}</h1>
+      <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-black/70 px-4 py-1.5 ring-1 ring-white/10">
+        <Flame className="h-3.5 w-3.5 text-orange-400" />
+        <span className="text-[11px] text-white/60">Powered by:</span>
+        <span className="text-[11px] font-bold tracking-wider">ALGOPRO</span>
+      </div>
+      <ActionBar running={running} toggle={toggle} handleDelete={handleDelete} onOpenBubble={onOpenBubble} />
+      <p className="mt-2 text-[10px] uppercase tracking-[0.3em] text-white/30">{running ? "STOP" : "START"}</p>
+    </div>
+  );
+}
+
+// V2 — Modern: minimalist dark, large centered profile with glass-morphism
+function HomeV2({ session, running, toggle, handleDelete, onOpenBubble }: HomeVProps) {
+  return (
+    <div className="relative flex flex-col items-center px-5 pt-8 pb-10 text-center">
+      <div className="relative">
+        <button onClick={onOpenBubble} className="relative h-44 w-44 overflow-hidden rounded-full backdrop-blur-xl active:scale-[0.98]"
+          style={{ boxShadow: `0 0 0 1px rgba(255,255,255,0.15), 0 20px 60px -10px var(--app-accent)` }}>
+          {session.ea_image ? <img src={session.ea_image} alt={session.ea_name} className="h-full w-full object-cover" />
+            : <Bot className="mx-auto h-20 w-20 text-white/70" />}
+        </button>
+      </div>
+      <div className="mt-4"><LiveBadge running={running} /></div>
+      <h1 className="mt-6 text-2xl font-bold tracking-tight">{session.ea_name}</h1>
+      <p className="mt-1 text-[11px] text-white/40">Minimal · Glass interface</p>
+      <div className="mt-6 w-full max-w-[320px] rounded-3xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl">
+        <ActionBar running={running} toggle={toggle} handleDelete={handleDelete} onOpenBubble={onOpenBubble} />
+      </div>
+    </div>
+  );
+}
+
+// V3 — Futuristic: dark with animated glowing rings, card-based
+function HomeV3({ session, running, toggle, handleDelete, onOpenBubble }: HomeVProps) {
+  return (
+    <div className="relative flex flex-col items-center px-5 pt-6 pb-10 text-center">
+      <div className="relative mt-4">
+        <div className="absolute -inset-8 animate-pulse rounded-full" style={{ boxShadow: `0 0 60px 10px var(--app-accent), inset 0 0 40px var(--app-accent)`, border: `1px dashed var(--app-accent)` }} />
+        <div className="absolute -inset-14 rounded-full opacity-40" style={{ border: `1px dashed var(--app-accent)` }} />
+        <button onClick={onOpenBubble} className="relative h-48 w-48 overflow-hidden rounded-full ring-4 active:scale-[0.98]"
+          style={{ borderColor: "var(--app-accent)", boxShadow: `0 0 80px var(--app-accent)` }}>
+          {session.ea_image ? <img src={session.ea_image} alt={session.ea_name} className="h-full w-full object-cover" />
+            : <div className="grid h-full w-full place-items-center bg-black"><Bot className="h-20 w-20" style={{ color: "var(--app-accent)" }} /></div>}
+        </button>
+      </div>
+      <div className="mt-8"><LiveBadge running={running} /></div>
+      <h1 className="mt-4 text-3xl font-black uppercase" style={{ textShadow: `0 0 20px var(--app-accent)` }}>{session.ea_name}</h1>
+      <div className="mt-6 grid w-full max-w-[320px] grid-cols-3 gap-2">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+          <p className="text-[9px] uppercase tracking-wider text-white/40">Status</p>
+          <p className="mt-1 text-xs font-bold" style={{ color: running ? "#10b981" : "#94a3b8" }}>{running ? "ACTIVE" : "IDLE"}</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+          <p className="text-[9px] uppercase tracking-wider text-white/40">Plan</p>
+          <p className="mt-1 text-xs font-bold uppercase">{session.plan.slice(0, 6)}</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+          <p className="text-[9px] uppercase tracking-wider text-white/40">Pairs</p>
+          <p className="mt-1 text-xs font-bold">{session.symbols.length}</p>
+        </div>
+      </div>
+      <ActionBar running={running} toggle={toggle} handleDelete={handleDelete} onOpenBubble={onOpenBubble} />
+    </div>
+  );
+}
+
+// V4 — Pro: centered avatar with glow, horizontal action cards, image-background robot cards
+function HomeV4({ session, running, toggle, handleDelete, onOpenBubble }: HomeVProps) {
+  return (
+    <div className="relative flex flex-col items-center px-5 pt-8 pb-10">
+      <div className="relative">
+        <div className="absolute -inset-6 rounded-full blur-3xl" style={{ background: `color-mix(in oklab, var(--app-accent) 55%, transparent)` }} />
+        <button onClick={onOpenBubble} className="relative h-40 w-40 overflow-hidden rounded-full ring-4 active:scale-[0.98]"
+          style={{ borderColor: "var(--app-accent)", boxShadow: `0 0 90px var(--app-accent)` }}>
+          {session.ea_image ? <img src={session.ea_image} alt={session.ea_name} className="h-full w-full object-cover" />
+            : <div className="grid h-full w-full place-items-center bg-black"><Bot className="h-16 w-16 text-white" /></div>}
+        </button>
+      </div>
+      <h1 className="mt-6 text-center text-2xl font-black tracking-tight">{session.ea_name}</h1>
+      <div className="mt-2"><LiveBadge running={running} /></div>
+
+      <div className="mt-6 grid w-full max-w-[340px] grid-cols-2 gap-2.5">
+        <button onClick={onOpenBubble} className="relative flex h-24 overflow-hidden rounded-2xl p-3 text-left active:scale-[0.98]"
+          style={{ backgroundImage: session.ea_image ? `linear-gradient(135deg, rgba(0,0,0,0.7), rgba(0,0,0,0.4)), url(${session.ea_image})` : undefined, backgroundColor: "rgba(255,255,255,0.05)", backgroundSize: "cover", backgroundPosition: "center" }}>
+          <div className="flex flex-col justify-between">
+            <BarChart3 className="h-5 w-5" style={{ color: "var(--app-accent)" }} />
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-white/60">My Pairs</p>
+              <p className="text-lg font-black">{session.symbols.length}</p>
+            </div>
+          </div>
+        </button>
+        <button onClick={toggle} className="relative flex h-24 flex-col justify-between rounded-2xl p-3 text-left active:scale-[0.98]"
+          style={{ background: running ? "linear-gradient(135deg, #dc2626, #7f1d1d)" : `linear-gradient(135deg, var(--app-accent), color-mix(in oklab, var(--app-accent) 40%, black))` }}>
+          {running ? <Square className="h-5 w-5 fill-white text-white" /> : <Play className="h-5 w-5 fill-white text-white" />}
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-white/70">Bot</p>
+            <p className="text-lg font-black text-white">{running ? "STOP" : "START"}</p>
+          </div>
+        </button>
+      </div>
+
+      <ActionBar running={running} toggle={toggle} handleDelete={handleDelete} onOpenBubble={onOpenBubble} />
+      <p className="mt-4 text-[10px] tracking-[0.35em] text-white/30">POWERED BY: ALGOPRO</p>
     </div>
   );
 }
