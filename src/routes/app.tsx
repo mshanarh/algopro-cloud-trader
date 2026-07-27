@@ -1440,6 +1440,7 @@ function SettingsScreen({
             title="V1 Interface (Classic)"
             desc="Original design with full EA image display"
             bullets={["Full-screen EA image", "Gradient overlays", "Classic layout"]}
+          />
           <VariantCard selected={style.home === "v5"} onSelect={() => onStyle({ home: "v5" })} accent={accent} title="V5 Interface (Neon Grid)" desc="Neon cyberpunk grid backdrop" bullets={["Grid backdrop overlay", "Neon-glow square avatar", "Text-shadow neon title"]} />
           <VariantCard selected={style.home === "v6"} onSelect={() => onStyle({ home: "v6" })} accent={accent} title="V6 Interface (Gradient Card)" desc="Single gradient-bordered card" bullets={["Gradient outer border", "Compact centered layout", "Bold uppercase title"]} />
         </div>
