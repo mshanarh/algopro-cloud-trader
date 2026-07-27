@@ -1829,3 +1829,153 @@ function BottomNav({
     </nav>
   );
 }
+
+// ===== Additional Home variants =====
+function HomeV5({ session, running, toggle, handleDelete, onOpenBubble }: HomeVProps) {
+  return (
+    <div className="relative flex flex-col items-center px-5 pt-6 pb-10 text-center">
+      <div className="pointer-events-none absolute inset-0 opacity-30" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+      <div className="relative mt-4">
+        <button onClick={onOpenBubble} className="relative h-40 w-40 overflow-hidden rounded-3xl ring-2 active:scale-[0.98]"
+          style={{ borderColor: "var(--app-accent)", boxShadow: `0 0 60px var(--app-accent), inset 0 0 30px var(--app-accent)` }}>
+          {session.ea_image ? <img src={session.ea_image} className="h-full w-full object-cover" alt="" />
+            : <div className="grid h-full w-full place-items-center bg-black"><Bot className="h-16 w-16 text-white" /></div>}
+        </button>
+      </div>
+      <div className="relative mt-4"><LiveBadge running={running} /></div>
+      <h1 className="relative mt-4 text-2xl font-black uppercase tracking-widest" style={{ textShadow: `0 0 15px var(--app-accent)` }}>{session.ea_name}</h1>
+      <p className="relative mt-1 text-[10px] uppercase tracking-[0.3em] text-white/40">Neon Grid</p>
+      <div className="relative"><ActionBar running={running} toggle={toggle} handleDelete={handleDelete} onOpenBubble={onOpenBubble} /></div>
+    </div>
+  );
+}
+
+function HomeV6({ session, running, toggle, handleDelete, onOpenBubble }: HomeVProps) {
+  return (
+    <div className="relative flex flex-col items-center px-5 pt-8 pb-10">
+      <div className="w-full max-w-[340px] overflow-hidden rounded-[32px] p-[2px]"
+        style={{ background: `linear-gradient(135deg, var(--app-accent), color-mix(in oklab, var(--app-accent) 20%, black))` }}>
+        <div className="rounded-[30px] bg-black/70 p-6 text-center backdrop-blur-xl">
+          <button onClick={onOpenBubble} className="mx-auto block h-32 w-32 overflow-hidden rounded-2xl ring-2 active:scale-[0.98]"
+            style={{ borderColor: "var(--app-accent)" }}>
+            {session.ea_image ? <img src={session.ea_image} className="h-full w-full object-cover" alt="" />
+              : <div className="grid h-full w-full place-items-center bg-white/5"><Bot className="h-14 w-14 text-white" /></div>}
+          </button>
+          <h1 className="mt-4 text-xl font-black uppercase">{session.ea_name}</h1>
+          <div className="mt-2"><LiveBadge running={running} /></div>
+          <p className="mt-2 text-[10px] uppercase tracking-[0.3em] text-white/40">Gradient Card</p>
+        </div>
+      </div>
+      <ActionBar running={running} toggle={toggle} handleDelete={handleDelete} onOpenBubble={onOpenBubble} />
+    </div>
+  );
+}
+
+function AddLicenceButton({ onLogin }: { onLogin: (s: Session) => void }) {
+  const validate = useServerFn(validateLicense);
+  const [open, setOpen] = useState(false);
+  const [key, setKey] = useState("");
+  const [loading, setLoading] = useState(false);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!key.trim()) return;
+    setLoading(true);
+    try {
+      const r = await validate({ data: { key } });
+      if (!r.ok) { toast.error(r.reason); return; }
+      onLogin({
+        key: key.toUpperCase(),
+        username: r.username, ea_name: r.ea_name, symbols: r.symbols,
+        expires_at: r.expires_at, plan: r.plan, ea_image: r.ea_image,
+      });
+      toast.success("New licence activated");
+      setOpen(false); setKey("");
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed"); }
+    finally { setLoading(false); }
+  };
+  return (
+    <>
+      <button onClick={() => setOpen(true)}
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed py-3 text-sm font-bold active:scale-[0.98]"
+        style={{ borderColor: "var(--app-accent)", color: "var(--app-accent)" }}>
+        <Plus className="h-4 w-4" /> ADD NEW LICENCE KEY
+      </button>
+      {open && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-5">
+          <div className="w-full max-w-sm rounded-2xl bg-[#0b1224] p-5 ring-1 ring-white/10">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-base font-bold">Enter Licence Key</h2>
+              <button onClick={() => setOpen(false)} className="rounded-md p-1 text-white/60 hover:bg-white/10"><X className="h-4 w-4" /></button>
+            </div>
+            <form onSubmit={submit} className="space-y-3">
+              <div className="relative">
+                <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+                <input value={key} onChange={(e) => setKey(e.target.value.toUpperCase())}
+                  placeholder="APRO-XXXX-XXXX-XXXX-XXXX"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-10 pr-3 text-center font-mono text-sm tracking-wider text-white placeholder:text-white/30 outline-none focus:border-[var(--app-accent)]"
+                  maxLength={30} autoCapitalize="characters" autoComplete="off" autoFocus />
+              </div>
+              <button type="submit" disabled={loading}
+                className="w-full rounded-xl py-3 text-sm font-semibold text-black disabled:opacity-60"
+                style={{ backgroundColor: "var(--app-accent)" }}>
+                {loading ? "Validating..." : "Activate"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ===== Paywall / device screens =====
+function BankRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3 border-b border-white/5 pb-2 last:border-0 last:pb-0">
+      <span className="text-white/50">{label}</span>
+      <span className="text-right font-semibold">{value}</span>
+    </div>
+  );
+}
+
+function AccessDeniedScreen({ onSignOut }: { onSignOut: () => void }) {
+  return (
+    <div className="flex h-full flex-col items-center px-6 pt-10 pb-8 text-center">
+      <div className="grid h-20 w-20 place-items-center rounded-2xl bg-red-500/20 ring-2 ring-red-500/50">
+        <AlertTriangle className="h-10 w-10 text-red-400" />
+      </div>
+      <h1 className="mt-5 text-2xl font-black text-red-400">ACCESS DENIED</h1>
+      <p className="mt-2 max-w-xs text-sm text-white/70">
+        You haven't paid for app access yet. Please pay <span className="font-bold text-white">$10</span> to the account below and message the admin to activate your email.
+      </p>
+      <div className="mt-6 w-full max-w-sm rounded-2xl border border-white/10 bg-black/40 p-5 text-left">
+        <p className="text-center text-[11px] uppercase tracking-[0.3em] text-white/40">Banking Details</p>
+        <div className="mt-4 space-y-3 text-sm">
+          <BankRow label="Bank name" value="Standard Bank" />
+          <BankRow label="Account holder" value="MRS ZANDILE Z MOFOKENG" />
+          <BankRow label="Account number" value="10 23 913 954 0" />
+          <BankRow label="Account type" value="CURRENT" />
+        </div>
+      </div>
+      <button onClick={onSignOut} className="mt-6 text-xs text-white/40 underline">Use a different email</button>
+    </div>
+  );
+}
+
+function OtherDeviceScreen({ email, onSignOut }: { email: string; onSignOut: () => void }) {
+  return (
+    <div className="flex h-full flex-col items-center px-6 pt-10 pb-8 text-center">
+      <div className="grid h-20 w-20 place-items-center rounded-2xl bg-amber-500/20 ring-2 ring-amber-500/50">
+        <AlertTriangle className="h-10 w-10 text-amber-400" />
+      </div>
+      <h1 className="mt-5 text-2xl font-black text-amber-400">ACCOUNT ALREADY USED</h1>
+      <p className="mt-2 max-w-xs text-sm text-white/70">
+        The email <span className="font-semibold text-white">{email}</span> is already active on another device.
+      </p>
+      <p className="mt-3 max-w-xs text-xs text-white/50">
+        Sign in to the EA Force portal with this same email and open <span className="font-semibold text-white">Profile → Reactivate my mobile app</span>. Only the paid owner can reactivate — nobody else can steal your access.
+      </p>
+      <button onClick={onSignOut} className="mt-6 rounded-xl bg-white/10 px-4 py-2 text-xs font-semibold">Use a different email</button>
+    </div>
+  );
+}
