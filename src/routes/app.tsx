@@ -1541,13 +1541,6 @@ function SettingsScreen({
         <Row label="Expires" value={new Date(session.expires_at).toLocaleDateString()} />
       </div>
 
-      <button
-        onClick={onLogout}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-500/30 bg-rose-500/10 py-3 text-sm font-semibold text-rose-300"
-      >
-        <LogOut className="h-4 w-4" /> Sign out
-      </button>
-
       <p className="mt-6 text-center text-[10px] tracking-[0.3em] text-white/30">POWERED BY: EA FORCE</p>
     </div>
   );
