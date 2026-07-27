@@ -84,6 +84,65 @@ export const validateMentor = createServerFn({ method: "POST" })
     return { ok: true as const, is_admin, name: profile.display_name || profile.full_name || "Trader" };
   });
 
+export const checkAppAccess = createServerFn({ method: "POST" })
+  .inputValidator((input) => z.object({
+    email: z.string().trim().email().max(255),
+    device_id: z.string().trim().min(8).max(100),
+  }).parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const email = data.email.toLowerCase();
+    const { data: row } = await (supabaseAdmin as any)
+      .from("app_access").select("paid, device_id").eq("email", email).maybeSingle();
+    if (!row || !row.paid) return { ok: false as const, reason: "unpaid" as const };
+    if (!row.device_id) {
+      await (supabaseAdmin as any).from("app_access")
+        .update({ device_id: data.device_id, updated_at: new Date().toISOString() })
+        .eq("email", email);
+      return { ok: true as const };
+    }
+    if (row.device_id === data.device_id) return { ok: true as const };
+    return { ok: false as const, reason: "other_device" as const };
+  });
+
+export const reactivateMyDevice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: u } = await supabaseAdmin.auth.admin.getUserById(context.userId);
+    const email = u?.user?.email?.toLowerCase();
+    if (!email) throw new Error("No email on account");
+    const { data: row } = await (supabaseAdmin as any).from("app_access")
+      .select("paid").eq("email", email).maybeSingle();
+    if (!row?.paid) throw new Error("This email hasn't paid for app access yet");
+    await (supabaseAdmin as any).from("app_access")
+      .update({ device_id: null, updated_at: new Date().toISOString() })
+      .eq("email", email);
+    return { ok: true };
+  });
+
+export const adminSetAppAccess = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({
+    email: z.string().trim().email().max(255),
+    paid: z.boolean(),
+    reset_device: z.boolean().optional(),
+  }).parse(input))
+  .handler(async ({ context, data }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const email = data.email.toLowerCase();
+    const patch: Record<string, unknown> = {
+      email, paid: data.paid, updated_at: new Date().toISOString(),
+    };
+    if (data.reset_device) patch.device_id = null;
+    const { error } = await (supabaseAdmin as any)
+      .from("app_access").upsert(patch, { onConflict: "email" });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const getEA = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
@@ -143,7 +202,7 @@ export const validateLicense = createServerFn({ method: "POST" })
       username: row.username,
       expires_at: row.expires_at,
       plan: row.plan as string,
-      ea_name: ea?.name ?? "Algopro Bot",
+      ea_name: ea?.name ?? "EA Force Bot",
       symbols: (ea?.symbols ?? []) as string[],
       ea_image: (ea?.image_url ?? null) as string | null,
     };

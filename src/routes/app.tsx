@@ -7,15 +7,15 @@ import {
   HelpCircle, Wifi, Battery, Signal, Flame,
   TrendingUp, TrendingDown, LogOut, ShieldCheck,
   LineChart, Database, Target, Trash2, BarChart3, Plus, Palette, Film, X,
-  Upload, Send, ScanLine, ArrowLeft, FileText,
+  Upload, Send, ScanLine, ArrowLeft, FileText, AlertTriangle,
 } from "lucide-react";
-import { validateLicense, validateMentor } from "@/lib/portal.functions";
+import { validateLicense, validateMentor, checkAppAccess } from "@/lib/portal.functions";
 import { analyzeChart } from "@/lib/scanner.functions";
 
 export const Route = createFileRoute("/app")({
   component: PhoneApp,
   head: () => ({
-    meta: [{ title: "Algopro EA — Mobile" }],
+    meta: [{ title: "EA Force — Mobile" }],
     links: [{ rel: "manifest", href: "/manifest.webmanifest" }],
   }),
 });
@@ -59,12 +59,13 @@ const PAIRS_KEY = "algopro.pairs";
 const STYLE_KEY = "algopro.style";
 
 type Pair = { symbol: string; lot: number; trades: number };
-type HomeVariant = "v1" | "v2" | "v3" | "v4";
+type HomeVariant = "v1" | "v2" | "v3" | "v4" | "v5" | "v6";
 type NavVariant = "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | "v8";
 type UIStyle = { home: HomeVariant; nav: NavVariant };
 const DEFAULT_STYLE: UIStyle = { home: "v4", nav: "v1" };
 const SCAN_LIMIT = 50;
 const SCAN_COUNT_KEY = "algopro.scans";
+const DEVICE_KEY = "ea.device";
 
 function speak(text: string) {
   try {
@@ -79,6 +80,17 @@ function speak(text: string) {
   } catch {}
 }
 
+function getDeviceId() {
+  try {
+    let d = localStorage.getItem(DEVICE_KEY);
+    if (!d) {
+      d = (crypto.randomUUID?.() ?? String(Date.now()) + Math.random().toString(36).slice(2));
+      localStorage.setItem(DEVICE_KEY, d);
+    }
+    return d;
+  } catch { return "browser"; }
+}
+
 function PhoneApp() {
   return (
     <div className="min-h-screen bg-slate-100 px-0 py-0 sm:px-6 sm:py-10 lg:py-14">
@@ -88,7 +100,7 @@ function PhoneApp() {
           <AppRouter />
         </PhoneFrame>
         <p className="mt-4 hidden text-center text-xs text-slate-500 sm:block">
-          Algopro mobile preview — runs full-screen on iOS/Android
+          EA Force mobile preview — runs full-screen on iOS/Android
         </p>
       </div>
     </div>
@@ -138,7 +150,7 @@ function InstallBanner() {
         onClick={onInstall}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-lg active:scale-[0.98]"
       >
-        📲 Install Algopro on your phone
+        📲 Install EA Force on your phone
       </button>
       {showIos && (
         <div className="mt-2 rounded-lg border border-slate-300 bg-white p-3 text-xs text-slate-700">
@@ -184,14 +196,18 @@ function StatusBar() {
   );
 }
 
+type AccessState = "idle" | "checking" | "ok" | "unpaid" | "other_device";
+
 function AppRouter() {
   const [mentor, setMentor] = useState<Mentor | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [tab, setTab] = useState<"home" | "symbols" | "metatrader" | "scanner" | "settings" | "help">("home");
+  const [tab, setTab] = useState<TabId>("home");
   const [accent, setAccent] = useState<string>("#22d3ee");
   const [bgVideo, setBgVideo] = useState<string>("");
   const [style, setStyle] = useState<UIStyle>(DEFAULT_STYLE);
   const [pairs, setPairs] = useState<Pair[]>([]);
+  const [access, setAccess] = useState<AccessState>("idle");
+  const check = useServerFn(checkAppAccess);
 
   useEffect(() => {
     try {
@@ -209,6 +225,24 @@ function AppRouter() {
       if (p) setPairs(JSON.parse(p));
     } catch {}
   }, []);
+
+  useEffect(() => {
+    if (!mentor) { setAccess("idle"); return; }
+    if (mentor.is_admin) { setAccess("ok"); return; }
+    setAccess("checking");
+    check({ data: { email: mentor.email, device_id: getDeviceId() } })
+      .then((r) => {
+        if (r.ok) { setAccess("ok"); return; }
+        if (r.reason === "other_device") {
+          setAccess("other_device");
+          speak("Account already used on another device. Please reactivate from your portal.");
+        } else {
+          setAccess("unpaid");
+          speak("Access denied. Here are my banking details below.");
+        }
+      })
+      .catch(() => setAccess("ok"));
+  }, [mentor, check]);
 
   const updateStyle = (s: Partial<UIStyle>) => {
     setStyle((prev) => {
@@ -249,6 +283,8 @@ function AppRouter() {
     [accent],
   );
 
+  const gated = mentor && access === "ok";
+
   return (
     <div
       className="relative flex h-full flex-col text-white"
@@ -274,12 +310,17 @@ function AppRouter() {
       <StatusBar />
       <div className="relative z-10 flex-1 overflow-y-auto pb-24">
         {!mentor && <MentorGate onSuccess={onMentor} />}
-        {mentor && !session && <LicenseGate mentor={mentor} onSuccess={onLogin} onSignOut={onSignOutAll} />}
-        {mentor && session && tab === "home" && <HomeScreen session={session} onDelete={onLogout} style={style} pairs={pairs} />}
-        {mentor && session && tab === "symbols" && <SymbolsScreen session={session} pairs={pairs} setPairs={updatePairs} />}
-        {mentor && session && tab === "metatrader" && <MetaTraderScreen />}
-        {mentor && session && tab === "scanner" && <ScannerScreen session={session} />}
-        {mentor && session && tab === "settings" && (
+        {mentor && access === "checking" && (
+          <div className="flex h-full items-center justify-center text-sm text-white/50">Verifying access…</div>
+        )}
+        {mentor && access === "unpaid" && <AccessDeniedScreen onSignOut={onSignOutAll} />}
+        {mentor && access === "other_device" && <OtherDeviceScreen email={mentor.email} onSignOut={onSignOutAll} />}
+        {gated && !session && <LicenseGate mentor={mentor!} onSuccess={onLogin} onSignOut={onSignOutAll} />}
+        {gated && session && tab === "home" && <HomeScreen session={session} onDelete={onLogout} onLogin={onLogin} style={style} pairs={pairs} />}
+        {gated && session && tab === "symbols" && <SymbolsScreen session={session} pairs={pairs} setPairs={updatePairs} />}
+        {gated && session && tab === "metatrader" && <MetaTraderScreen />}
+        {gated && session && tab === "scanner" && <ScannerScreen session={session} />}
+        {gated && session && tab === "settings" && (
           <SettingsScreen
             session={session}
             onLogout={onLogout}
@@ -291,12 +332,13 @@ function AppRouter() {
             onStyle={updateStyle}
           />
         )}
-        {mentor && session && tab === "help" && <HelpScreen />}
+        {gated && session && tab === "help" && <HelpScreen />}
       </div>
-      {mentor && session && <BottomNav tab={tab} setTab={setTab} style={style} />}
+      {gated && session && <BottomNav tab={tab} setTab={setTab} style={style} />}
     </div>
   );
 }
+
 
 function MentorGate({ onSuccess }: { onSuccess: (m: Mentor) => void }) {
   const validate = useServerFn(validateMentor);
@@ -323,7 +365,7 @@ function MentorGate({ onSuccess }: { onSuccess: (m: Mentor) => void }) {
       <div className="mb-6 grid h-20 w-20 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-2xl shadow-violet-500/40">
         <Bot className="h-10 w-10 text-white" />
       </div>
-      <h1 className="text-2xl font-bold">Algopro EA</h1>
+      <h1 className="text-2xl font-bold">EA Force EA</h1>
       <p className="mt-1 text-sm text-white/60">Sign in with your email and Mentor ID</p>
 
       <form onSubmit={submit} className="mt-8 w-full space-y-3">
@@ -441,7 +483,7 @@ function LicenseGate({ mentor, onSuccess, onSignOut }: { mentor: Mentor; onSucce
   );
 }
 
-function HomeScreen({ session, onDelete, style, pairs }: { session: Session; onDelete: () => void; style: UIStyle; pairs: Pair[] }) {
+function HomeScreen({ session, onDelete, onLogin, style, pairs }: { session: Session; onDelete: () => void; onLogin: (s: Session) => void; style: UIStyle; pairs: Pair[] }) {
   const [running, setRunning] = useState(false);
   const [bubbleOpen, setBubbleOpen] = useState(false);
 
@@ -474,6 +516,12 @@ function HomeScreen({ session, onDelete, style, pairs }: { session: Session; onD
       {style.home === "v2" && <HomeV2 {...common} />}
       {style.home === "v3" && <HomeV3 {...common} />}
       {style.home === "v4" && <HomeV4 {...common} />}
+      {style.home === "v5" && <HomeV5 {...common} />}
+      {style.home === "v6" && <HomeV6 {...common} />}
+
+      <div className="px-5 pb-6">
+        <AddLicenceButton onLogin={onLogin} />
+      </div>
 
       {bubbleOpen && (
         <TradeBubble
@@ -487,6 +535,7 @@ function HomeScreen({ session, onDelete, style, pairs }: { session: Session; onD
     </>
   );
 }
+
 
 type HomeVProps = {
   session: Session;
@@ -542,7 +591,7 @@ function HomeV1({ session, running, toggle, handleDelete, onOpenBubble }: HomeVP
       <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-black/70 px-4 py-1.5 ring-1 ring-white/10">
         <Flame className="h-3.5 w-3.5 text-orange-400" />
         <span className="text-[11px] text-white/60">Powered by:</span>
-        <span className="text-[11px] font-bold tracking-wider">ALGOPRO</span>
+        <span className="text-[11px] font-bold tracking-wider">EA FORCE</span>
       </div>
       <ActionBar running={running} toggle={toggle} handleDelete={handleDelete} onOpenBubble={onOpenBubble} />
       <p className="mt-2 text-[10px] uppercase tracking-[0.3em] text-white/30">{running ? "STOP" : "START"}</p>
@@ -642,7 +691,7 @@ function HomeV4({ session, running, toggle, handleDelete, onOpenBubble }: HomeVP
       </div>
 
       <ActionBar running={running} toggle={toggle} handleDelete={handleDelete} onOpenBubble={onOpenBubble} />
-      <p className="mt-4 text-[10px] tracking-[0.35em] text-white/30">POWERED BY: ALGOPRO</p>
+      <p className="mt-4 text-[10px] tracking-[0.35em] text-white/30">POWERED BY: EA FORCE</p>
     </div>
   );
 }
@@ -776,7 +825,7 @@ function TradeBubble({
 
           <div className="mt-4 flex justify-end">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500 px-3 py-1 text-[11px] font-bold text-white">
-              Powered by <span className="font-extrabold">ALGOPRO</span>
+              Powered by <span className="font-extrabold">EA FORCE</span>
             </span>
           </div>
 
@@ -1493,7 +1542,7 @@ function SettingsScreen({
         <LogOut className="h-4 w-4" /> Sign out
       </button>
 
-      <p className="mt-6 text-center text-[10px] tracking-[0.3em] text-white/30">POWERED BY: ALGOPRO</p>
+      <p className="mt-6 text-center text-[10px] tracking-[0.3em] text-white/30">POWERED BY: EA FORCE</p>
     </div>
   );
 }
@@ -1527,7 +1576,7 @@ function HelpScreen() {
           </div>
         ))}
       </div>
-      <p className="mt-6 text-center text-[10px] tracking-[0.3em] text-white/30">POWERED BY: ALGOPRO</p>
+      <p className="mt-6 text-center text-[10px] tracking-[0.3em] text-white/30">POWERED BY: EA FORCE</p>
     </div>
   );
 }
