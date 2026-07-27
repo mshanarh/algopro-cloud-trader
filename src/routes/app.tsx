@@ -1367,6 +1367,9 @@ function ScannerScreen({ session: _session }: { session: Session }) {
 const PRESET_COLORS = [
   "#22d3ee", "#3b82f6", "#8b5cf6", "#ec4899",
   "#ef4444", "#f97316", "#eab308", "#22c55e",
+  "#10b981", "#14b8a6", "#0ea5e9", "#6366f1",
+  "#a855f7", "#d946ef", "#f43f5e", "#facc15",
+  "#84cc16", "#ffffff",
 ];
 
 function SettingsScreen({
