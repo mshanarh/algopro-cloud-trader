@@ -16,13 +16,13 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Algopro — Host Forex EAs in the Cloud, control from your phone" },
+      { title: "EA Force — Host Forex EAs in the Cloud, control from your phone" },
       {
         name: "description",
         content:
-          "Algopro is a secure mobile hosting platform for MetaTrader EAs. Run MT4/MT5 bots 24/7 across 40,000+ brokers and control everything from your phone.",
+          "EA Force is a secure mobile hosting platform for MetaTrader EAs. Run MT4/MT5 bots 24/7 across 40,000+ brokers and control everything from your phone.",
       },
-      { property: "og:title", content: "Algopro — Cloud hosting for Forex EAs" },
+      { property: "og:title", content: "EA Force — Cloud hosting for Forex EAs" },
       {
         property: "og:description",
         content: "Run MetaTrader EAs 24/7 on secure cloud VPS. Control from your phone.",
@@ -39,7 +39,7 @@ function Logo() {
       <span className="grid h-8 w-8 place-items-center rounded-lg bg-[image:var(--gradient-purple)] text-primary-foreground shadow-[var(--shadow-elegant)]">
         <span className="text-sm font-black">A</span>
       </span>
-      <span className="text-lg font-bold tracking-tight">Algopro</span>
+      <span className="text-lg font-bold tracking-tight">EA Force</span>
     </Link>
   );
 }
@@ -90,7 +90,7 @@ function Hero() {
             <span className="bg-gradient-to-r from-accent to-[oklch(0.78_0.15_180)] bg-clip-text text-transparent">
               Cloud
             </span>{" "}
-            with Algopro
+            with EA Force
           </h1>
           <p className="mt-5 max-w-xl text-base text-white/75 sm:text-lg">
             A secure mobile hosting platform that lets you run MetaTrader EAs 24/7 and control
@@ -127,7 +127,7 @@ function Hero() {
           />
           <img
             src={heroPhone}
-            alt="Algopro mobile app showing the Bot Console with a glowing teal bot icon"
+            alt="EA Force mobile app showing the Bot Console with a glowing teal bot icon"
             width={1024}
             height={1280}
             className="mx-auto w-full max-w-sm drop-shadow-2xl"
@@ -165,7 +165,7 @@ function HowItWorks() {
     {
       n: "01",
       title: "Upload Your EA",
-      desc: "Drop your MT4/MT5 expert advisor into Algopro's secure cloud workspace.",
+      desc: "Drop your MT4/MT5 expert advisor into EA Force's secure cloud workspace.",
     },
     {
       n: "02",
@@ -261,7 +261,7 @@ function CTA() {
             to="/download"
             className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-7 py-3 text-sm font-semibold backdrop-blur hover:bg-white/10"
           >
-            <Smartphone className="h-4 w-4" /> Download Algopro App
+            <Smartphone className="h-4 w-4" /> Download EA Force App
           </Link>
         </div>
 

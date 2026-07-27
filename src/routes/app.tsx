@@ -7,15 +7,15 @@ import {
   HelpCircle, Wifi, Battery, Signal, Flame,
   TrendingUp, TrendingDown, LogOut, ShieldCheck,
   LineChart, Database, Target, Trash2, BarChart3, Plus, Palette, Film, X,
-  Upload, Send, ScanLine, ArrowLeft, FileText,
+  Upload, Send, ScanLine, ArrowLeft, FileText, AlertTriangle,
 } from "lucide-react";
-import { validateLicense, validateMentor } from "@/lib/portal.functions";
+import { validateLicense, validateMentor, checkAppAccess } from "@/lib/portal.functions";
 import { analyzeChart } from "@/lib/scanner.functions";
 
 export const Route = createFileRoute("/app")({
   component: PhoneApp,
   head: () => ({
-    meta: [{ title: "Algopro EA — Mobile" }],
+    meta: [{ title: "EA Force — Mobile" }],
     links: [{ rel: "manifest", href: "/manifest.webmanifest" }],
   }),
 });
@@ -59,12 +59,13 @@ const PAIRS_KEY = "algopro.pairs";
 const STYLE_KEY = "algopro.style";
 
 type Pair = { symbol: string; lot: number; trades: number };
-type HomeVariant = "v1" | "v2" | "v3" | "v4";
+type HomeVariant = "v1" | "v2" | "v3" | "v4" | "v5" | "v6";
 type NavVariant = "v1" | "v2" | "v3" | "v4" | "v5" | "v6" | "v7" | "v8";
 type UIStyle = { home: HomeVariant; nav: NavVariant };
 const DEFAULT_STYLE: UIStyle = { home: "v4", nav: "v1" };
 const SCAN_LIMIT = 50;
 const SCAN_COUNT_KEY = "algopro.scans";
+const DEVICE_KEY = "ea.device";
 
 function speak(text: string) {
   try {
@@ -79,6 +80,17 @@ function speak(text: string) {
   } catch {}
 }
 
+function getDeviceId() {
+  try {
+    let d = localStorage.getItem(DEVICE_KEY);
+    if (!d) {
+      d = (crypto.randomUUID?.() ?? String(Date.now()) + Math.random().toString(36).slice(2));
+      localStorage.setItem(DEVICE_KEY, d);
+    }
+    return d;
+  } catch { return "browser"; }
+}
+
 function PhoneApp() {
   return (
     <div className="min-h-screen bg-slate-100 px-0 py-0 sm:px-6 sm:py-10 lg:py-14">
@@ -88,7 +100,7 @@ function PhoneApp() {
           <AppRouter />
         </PhoneFrame>
         <p className="mt-4 hidden text-center text-xs text-slate-500 sm:block">
-          Algopro mobile preview — runs full-screen on iOS/Android
+          EA Force mobile preview — runs full-screen on iOS/Android
         </p>
       </div>
     </div>
@@ -138,7 +150,7 @@ function InstallBanner() {
         onClick={onInstall}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-lg active:scale-[0.98]"
       >
-        📲 Install Algopro on your phone
+        📲 Install EA Force on your phone
       </button>
       {showIos && (
         <div className="mt-2 rounded-lg border border-slate-300 bg-white p-3 text-xs text-slate-700">
@@ -184,14 +196,18 @@ function StatusBar() {
   );
 }
 
+type AccessState = "idle" | "checking" | "ok" | "unpaid" | "other_device";
+
 function AppRouter() {
   const [mentor, setMentor] = useState<Mentor | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [tab, setTab] = useState<"home" | "symbols" | "metatrader" | "scanner" | "settings" | "help">("home");
+  const [tab, setTab] = useState<TabId>("home");
   const [accent, setAccent] = useState<string>("#22d3ee");
   const [bgVideo, setBgVideo] = useState<string>("");
   const [style, setStyle] = useState<UIStyle>(DEFAULT_STYLE);
   const [pairs, setPairs] = useState<Pair[]>([]);
+  const [access, setAccess] = useState<AccessState>("idle");
+  const check = useServerFn(checkAppAccess);
 
   useEffect(() => {
     try {
@@ -209,6 +225,24 @@ function AppRouter() {
       if (p) setPairs(JSON.parse(p));
     } catch {}
   }, []);
+
+  useEffect(() => {
+    if (!mentor) { setAccess("idle"); return; }
+    if (mentor.is_admin) { setAccess("ok"); return; }
+    setAccess("checking");
+    check({ data: { email: mentor.email, device_id: getDeviceId() } })
+      .then((r) => {
+        if (r.ok) { setAccess("ok"); return; }
+        if (r.reason === "other_device") {
+          setAccess("other_device");
+          speak("Account already used on another device. Please reactivate from your portal.");
+        } else {
+          setAccess("unpaid");
+          speak("Access denied. Here are my banking details below.");
+        }
+      })
+      .catch(() => setAccess("ok"));
+  }, [mentor, check]);
 
   const updateStyle = (s: Partial<UIStyle>) => {
     setStyle((prev) => {
@@ -249,6 +283,8 @@ function AppRouter() {
     [accent],
   );
 
+  const gated = mentor && access === "ok";
+
   return (
     <div
       className="relative flex h-full flex-col text-white"
@@ -274,12 +310,17 @@ function AppRouter() {
       <StatusBar />
       <div className="relative z-10 flex-1 overflow-y-auto pb-24">
         {!mentor && <MentorGate onSuccess={onMentor} />}
-        {mentor && !session && <LicenseGate mentor={mentor} onSuccess={onLogin} onSignOut={onSignOutAll} />}
-        {mentor && session && tab === "home" && <HomeScreen session={session} onDelete={onLogout} style={style} pairs={pairs} />}
-        {mentor && session && tab === "symbols" && <SymbolsScreen session={session} pairs={pairs} setPairs={updatePairs} />}
-        {mentor && session && tab === "metatrader" && <MetaTraderScreen />}
-        {mentor && session && tab === "scanner" && <ScannerScreen session={session} />}
-        {mentor && session && tab === "settings" && (
+        {mentor && access === "checking" && (
+          <div className="flex h-full items-center justify-center text-sm text-white/50">Verifying access…</div>
+        )}
+        {mentor && access === "unpaid" && <AccessDeniedScreen onSignOut={onSignOutAll} />}
+        {mentor && access === "other_device" && <OtherDeviceScreen email={mentor.email} onSignOut={onSignOutAll} />}
+        {gated && !session && <LicenseGate mentor={mentor!} onSuccess={onLogin} onSignOut={onSignOutAll} />}
+        {gated && session && tab === "home" && <HomeScreen session={session} onDelete={onLogout} onLogin={onLogin} style={style} pairs={pairs} />}
+        {gated && session && tab === "symbols" && <SymbolsScreen session={session} pairs={pairs} setPairs={updatePairs} />}
+        {gated && session && tab === "metatrader" && <MetaTraderScreen />}
+        {gated && session && tab === "scanner" && <ScannerScreen session={session} />}
+        {gated && session && tab === "settings" && (
           <SettingsScreen
             session={session}
             onLogout={onLogout}
@@ -291,12 +332,13 @@ function AppRouter() {
             onStyle={updateStyle}
           />
         )}
-        {mentor && session && tab === "help" && <HelpScreen />}
+        {gated && session && tab === "help" && <HelpScreen />}
       </div>
-      {mentor && session && <BottomNav tab={tab} setTab={setTab} style={style} />}
+      {gated && session && <BottomNav tab={tab} setTab={setTab} style={style} />}
     </div>
   );
 }
+
 
 function MentorGate({ onSuccess }: { onSuccess: (m: Mentor) => void }) {
   const validate = useServerFn(validateMentor);
@@ -323,7 +365,7 @@ function MentorGate({ onSuccess }: { onSuccess: (m: Mentor) => void }) {
       <div className="mb-6 grid h-20 w-20 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-2xl shadow-violet-500/40">
         <Bot className="h-10 w-10 text-white" />
       </div>
-      <h1 className="text-2xl font-bold">Algopro EA</h1>
+      <h1 className="text-2xl font-bold">EA Force EA</h1>
       <p className="mt-1 text-sm text-white/60">Sign in with your email and Mentor ID</p>
 
       <form onSubmit={submit} className="mt-8 w-full space-y-3">
@@ -441,7 +483,7 @@ function LicenseGate({ mentor, onSuccess, onSignOut }: { mentor: Mentor; onSucce
   );
 }
 
-function HomeScreen({ session, onDelete, style, pairs }: { session: Session; onDelete: () => void; style: UIStyle; pairs: Pair[] }) {
+function HomeScreen({ session, onDelete, onLogin, style, pairs }: { session: Session; onDelete: () => void; onLogin: (s: Session) => void; style: UIStyle; pairs: Pair[] }) {
   const [running, setRunning] = useState(false);
   const [bubbleOpen, setBubbleOpen] = useState(false);
 
@@ -474,6 +516,12 @@ function HomeScreen({ session, onDelete, style, pairs }: { session: Session; onD
       {style.home === "v2" && <HomeV2 {...common} />}
       {style.home === "v3" && <HomeV3 {...common} />}
       {style.home === "v4" && <HomeV4 {...common} />}
+      {style.home === "v5" && <HomeV5 {...common} />}
+      {style.home === "v6" && <HomeV6 {...common} />}
+
+      <div className="px-5 pb-6">
+        <AddLicenceButton onLogin={onLogin} />
+      </div>
 
       {bubbleOpen && (
         <TradeBubble
@@ -487,6 +535,7 @@ function HomeScreen({ session, onDelete, style, pairs }: { session: Session; onD
     </>
   );
 }
+
 
 type HomeVProps = {
   session: Session;
@@ -542,7 +591,7 @@ function HomeV1({ session, running, toggle, handleDelete, onOpenBubble }: HomeVP
       <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-black/70 px-4 py-1.5 ring-1 ring-white/10">
         <Flame className="h-3.5 w-3.5 text-orange-400" />
         <span className="text-[11px] text-white/60">Powered by:</span>
-        <span className="text-[11px] font-bold tracking-wider">ALGOPRO</span>
+        <span className="text-[11px] font-bold tracking-wider">EA FORCE</span>
       </div>
       <ActionBar running={running} toggle={toggle} handleDelete={handleDelete} onOpenBubble={onOpenBubble} />
       <p className="mt-2 text-[10px] uppercase tracking-[0.3em] text-white/30">{running ? "STOP" : "START"}</p>
@@ -642,7 +691,7 @@ function HomeV4({ session, running, toggle, handleDelete, onOpenBubble }: HomeVP
       </div>
 
       <ActionBar running={running} toggle={toggle} handleDelete={handleDelete} onOpenBubble={onOpenBubble} />
-      <p className="mt-4 text-[10px] tracking-[0.35em] text-white/30">POWERED BY: ALGOPRO</p>
+      <p className="mt-4 text-[10px] tracking-[0.35em] text-white/30">POWERED BY: EA FORCE</p>
     </div>
   );
 }
@@ -776,7 +825,7 @@ function TradeBubble({
 
           <div className="mt-4 flex justify-end">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500 px-3 py-1 text-[11px] font-bold text-white">
-              Powered by <span className="font-extrabold">ALGOPRO</span>
+              Powered by <span className="font-extrabold">EA FORCE</span>
             </span>
           </div>
 
@@ -1318,6 +1367,9 @@ function ScannerScreen({ session: _session }: { session: Session }) {
 const PRESET_COLORS = [
   "#22d3ee", "#3b82f6", "#8b5cf6", "#ec4899",
   "#ef4444", "#f97316", "#eab308", "#22c55e",
+  "#10b981", "#14b8a6", "#0ea5e9", "#6366f1",
+  "#a855f7", "#d946ef", "#f43f5e", "#facc15",
+  "#84cc16", "#ffffff",
 ];
 
 function SettingsScreen({
@@ -1389,8 +1441,11 @@ function SettingsScreen({
             desc="Original design with full EA image display"
             bullets={["Full-screen EA image", "Gradient overlays", "Classic layout"]}
           />
+          <VariantCard selected={style.home === "v5"} onSelect={() => onStyle({ home: "v5" })} accent={accent} title="V5 Interface (Neon Grid)" desc="Neon cyberpunk grid backdrop" bullets={["Grid backdrop overlay", "Neon-glow square avatar", "Text-shadow neon title"]} />
+          <VariantCard selected={style.home === "v6"} onSelect={() => onStyle({ home: "v6" })} accent={accent} title="V6 Interface (Gradient Card)" desc="Single gradient-bordered card" bullets={["Gradient outer border", "Compact centered layout", "Bold uppercase title"]} />
         </div>
       </div>
+
 
       {/* Bottom navigation variants */}
       <div className="mt-6">
@@ -1486,14 +1541,7 @@ function SettingsScreen({
         <Row label="Expires" value={new Date(session.expires_at).toLocaleDateString()} />
       </div>
 
-      <button
-        onClick={onLogout}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-500/30 bg-rose-500/10 py-3 text-sm font-semibold text-rose-300"
-      >
-        <LogOut className="h-4 w-4" /> Sign out
-      </button>
-
-      <p className="mt-6 text-center text-[10px] tracking-[0.3em] text-white/30">POWERED BY: ALGOPRO</p>
+      <p className="mt-6 text-center text-[10px] tracking-[0.3em] text-white/30">POWERED BY: EA FORCE</p>
     </div>
   );
 }
@@ -1527,7 +1575,7 @@ function HelpScreen() {
           </div>
         ))}
       </div>
-      <p className="mt-6 text-center text-[10px] tracking-[0.3em] text-white/30">POWERED BY: ALGOPRO</p>
+      <p className="mt-6 text-center text-[10px] tracking-[0.3em] text-white/30">POWERED BY: EA FORCE</p>
     </div>
   );
 }
@@ -1779,5 +1827,155 @@ function BottomNav({
         })}
       </div>
     </nav>
+  );
+}
+
+// ===== Additional Home variants =====
+function HomeV5({ session, running, toggle, handleDelete, onOpenBubble }: HomeVProps) {
+  return (
+    <div className="relative flex flex-col items-center px-5 pt-6 pb-10 text-center">
+      <div className="pointer-events-none absolute inset-0 opacity-30" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+      <div className="relative mt-4">
+        <button onClick={onOpenBubble} className="relative h-40 w-40 overflow-hidden rounded-3xl ring-2 active:scale-[0.98]"
+          style={{ borderColor: "var(--app-accent)", boxShadow: `0 0 60px var(--app-accent), inset 0 0 30px var(--app-accent)` }}>
+          {session.ea_image ? <img src={session.ea_image} className="h-full w-full object-cover" alt="" />
+            : <div className="grid h-full w-full place-items-center bg-black"><Bot className="h-16 w-16 text-white" /></div>}
+        </button>
+      </div>
+      <div className="relative mt-4"><LiveBadge running={running} /></div>
+      <h1 className="relative mt-4 text-2xl font-black uppercase tracking-widest" style={{ textShadow: `0 0 15px var(--app-accent)` }}>{session.ea_name}</h1>
+      <p className="relative mt-1 text-[10px] uppercase tracking-[0.3em] text-white/40">Neon Grid</p>
+      <div className="relative"><ActionBar running={running} toggle={toggle} handleDelete={handleDelete} onOpenBubble={onOpenBubble} /></div>
+    </div>
+  );
+}
+
+function HomeV6({ session, running, toggle, handleDelete, onOpenBubble }: HomeVProps) {
+  return (
+    <div className="relative flex flex-col items-center px-5 pt-8 pb-10">
+      <div className="w-full max-w-[340px] overflow-hidden rounded-[32px] p-[2px]"
+        style={{ background: `linear-gradient(135deg, var(--app-accent), color-mix(in oklab, var(--app-accent) 20%, black))` }}>
+        <div className="rounded-[30px] bg-black/70 p-6 text-center backdrop-blur-xl">
+          <button onClick={onOpenBubble} className="mx-auto block h-32 w-32 overflow-hidden rounded-2xl ring-2 active:scale-[0.98]"
+            style={{ borderColor: "var(--app-accent)" }}>
+            {session.ea_image ? <img src={session.ea_image} className="h-full w-full object-cover" alt="" />
+              : <div className="grid h-full w-full place-items-center bg-white/5"><Bot className="h-14 w-14 text-white" /></div>}
+          </button>
+          <h1 className="mt-4 text-xl font-black uppercase">{session.ea_name}</h1>
+          <div className="mt-2"><LiveBadge running={running} /></div>
+          <p className="mt-2 text-[10px] uppercase tracking-[0.3em] text-white/40">Gradient Card</p>
+        </div>
+      </div>
+      <ActionBar running={running} toggle={toggle} handleDelete={handleDelete} onOpenBubble={onOpenBubble} />
+    </div>
+  );
+}
+
+function AddLicenceButton({ onLogin }: { onLogin: (s: Session) => void }) {
+  const validate = useServerFn(validateLicense);
+  const [open, setOpen] = useState(false);
+  const [key, setKey] = useState("");
+  const [loading, setLoading] = useState(false);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!key.trim()) return;
+    setLoading(true);
+    try {
+      const r = await validate({ data: { key } });
+      if (!r.ok) { toast.error(r.reason); return; }
+      onLogin({
+        key: key.toUpperCase(),
+        username: r.username, ea_name: r.ea_name, symbols: r.symbols,
+        expires_at: r.expires_at, plan: r.plan, ea_image: r.ea_image,
+      });
+      toast.success("New licence activated");
+      setOpen(false); setKey("");
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed"); }
+    finally { setLoading(false); }
+  };
+  return (
+    <>
+      <button onClick={() => setOpen(true)}
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed py-3 text-sm font-bold active:scale-[0.98]"
+        style={{ borderColor: "var(--app-accent)", color: "var(--app-accent)" }}>
+        <Plus className="h-4 w-4" /> ADD NEW LICENCE KEY
+      </button>
+      {open && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-5">
+          <div className="w-full max-w-sm rounded-2xl bg-[#0b1224] p-5 ring-1 ring-white/10">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-base font-bold">Enter Licence Key</h2>
+              <button onClick={() => setOpen(false)} className="rounded-md p-1 text-white/60 hover:bg-white/10"><X className="h-4 w-4" /></button>
+            </div>
+            <form onSubmit={submit} className="space-y-3">
+              <div className="relative">
+                <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+                <input value={key} onChange={(e) => setKey(e.target.value.toUpperCase())}
+                  placeholder="APRO-XXXX-XXXX-XXXX-XXXX"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-10 pr-3 text-center font-mono text-sm tracking-wider text-white placeholder:text-white/30 outline-none focus:border-[var(--app-accent)]"
+                  maxLength={30} autoCapitalize="characters" autoComplete="off" autoFocus />
+              </div>
+              <button type="submit" disabled={loading}
+                className="w-full rounded-xl py-3 text-sm font-semibold text-black disabled:opacity-60"
+                style={{ backgroundColor: "var(--app-accent)" }}>
+                {loading ? "Validating..." : "Activate"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ===== Paywall / device screens =====
+function BankRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3 border-b border-white/5 pb-2 last:border-0 last:pb-0">
+      <span className="text-white/50">{label}</span>
+      <span className="text-right font-semibold">{value}</span>
+    </div>
+  );
+}
+
+function AccessDeniedScreen({ onSignOut }: { onSignOut: () => void }) {
+  return (
+    <div className="flex h-full flex-col items-center px-6 pt-10 pb-8 text-center">
+      <div className="grid h-20 w-20 place-items-center rounded-2xl bg-red-500/20 ring-2 ring-red-500/50">
+        <AlertTriangle className="h-10 w-10 text-red-400" />
+      </div>
+      <h1 className="mt-5 text-2xl font-black text-red-400">ACCESS DENIED</h1>
+      <p className="mt-2 max-w-xs text-sm text-white/70">
+        You haven't paid for app access yet. Please pay <span className="font-bold text-white">$10</span> to the account below and message the admin to activate your email.
+      </p>
+      <div className="mt-6 w-full max-w-sm rounded-2xl border border-white/10 bg-black/40 p-5 text-left">
+        <p className="text-center text-[11px] uppercase tracking-[0.3em] text-white/40">Banking Details</p>
+        <div className="mt-4 space-y-3 text-sm">
+          <BankRow label="Bank name" value="Standard Bank" />
+          <BankRow label="Account holder" value="MRS ZANDILE Z MOFOKENG" />
+          <BankRow label="Account number" value="10 23 913 954 0" />
+          <BankRow label="Account type" value="CURRENT" />
+        </div>
+      </div>
+      <button onClick={onSignOut} className="mt-6 text-xs text-white/40 underline">Use a different email</button>
+    </div>
+  );
+}
+
+function OtherDeviceScreen({ email, onSignOut }: { email: string; onSignOut: () => void }) {
+  return (
+    <div className="flex h-full flex-col items-center px-6 pt-10 pb-8 text-center">
+      <div className="grid h-20 w-20 place-items-center rounded-2xl bg-amber-500/20 ring-2 ring-amber-500/50">
+        <AlertTriangle className="h-10 w-10 text-amber-400" />
+      </div>
+      <h1 className="mt-5 text-2xl font-black text-amber-400">ACCOUNT ALREADY USED</h1>
+      <p className="mt-2 max-w-xs text-sm text-white/70">
+        The email <span className="font-semibold text-white">{email}</span> is already active on another device.
+      </p>
+      <p className="mt-3 max-w-xs text-xs text-white/50">
+        Sign in to the EA Force portal with this same email and open <span className="font-semibold text-white">Profile → Reactivate my mobile app</span>. Only the paid owner can reactivate — nobody else can steal your access.
+      </p>
+      <button onClick={onSignOut} className="mt-6 rounded-xl bg-white/10 px-4 py-2 text-xs font-semibold">Use a different email</button>
+    </div>
   );
 }

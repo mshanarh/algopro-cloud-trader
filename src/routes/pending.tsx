@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/pending")({
   component: PendingPage,
-  head: () => ({ meta: [{ title: "Awaiting approval — Algopro Portal" }] }),
+  head: () => ({ meta: [{ title: "Awaiting approval — EA Force Portal" }] }),
 });
 
 function PendingPage() {

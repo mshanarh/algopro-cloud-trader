@@ -1,7 +1,7 @@
 {
-  "name": "Algopro",
-  "short_name": "Algopro",
-  "description": "Algopro mobile bot",
+  "name": "EA Force",
+  "short_name": "EA Force",
+  "description": "EA Force mobile bot",
   "start_url": "/app",
   "scope": "/app",
   "display": "standalone",

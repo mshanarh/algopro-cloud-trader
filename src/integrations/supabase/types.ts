@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_access: {
+        Row: {
+          device_id: string | null
+          email: string
+          paid: boolean
+          updated_at: string
+        }
+        Insert: {
+          device_id?: string | null
+          email: string
+          paid?: boolean
+          updated_at?: string
+        }
+        Update: {
+          device_id?: string | null
+          email?: string
+          paid?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       expert_advisors: {
         Row: {
           created_at: string
