@@ -161,14 +161,14 @@ function WhyChoose() {
 }
 
 function Compare() {
-  const rows = [
+  const rows: Array<[string, boolean, boolean | "dim"]> = [
     ["Real-time signal sync", true, false],
     ["SL/TP sync", true, false],
     ["Any broker", true, false],
     ["No duplicate trades", true, false],
     ["Multi-client support", true, "dim"],
     ["Mobile app", true, false],
-  ] as const;
+  ];
   return (
     <section id="compare" className="px-5 py-20 text-white">
       <div className="mx-auto max-w-3xl text-center">

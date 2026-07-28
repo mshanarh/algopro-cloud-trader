@@ -17,6 +17,12 @@ function ProfilePage() {
   const { data } = useSuspenseQuery(dashQ);
   const qc = useQueryClient();
   const update = useServerFn(updateProfile);
+  const reactivate = useServerFn(reactivateMyDevice);
+  const react = useMutation({
+    mutationFn: () => reactivate(),
+    onSuccess: () => toast.success("App device reset. You can now open the app on this phone."),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
   const p = data.profile;
   const [fullName, setFullName] = useState(p?.full_name ?? "");
   const [displayName, setDisplayName] = useState(p?.display_name ?? "");
@@ -68,6 +74,24 @@ function ProfilePage() {
               {m.isPending ? "Saving..." : "Save changes"}
             </button>
           </form>
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-elegant)] sm:p-8">
+          <div className="mb-3 flex items-center gap-2">
+            <Smartphone className="h-5 w-5 text-primary" />
+            <h2 className="text-base font-bold">Reactivate App Access</h2>
+          </div>
+          <p className="mb-4 text-sm text-muted-foreground">
+            If the EA Force app says <b>"Account already used"</b>, tap below to reset your device binding.
+            This only works for the paid email logged into this portal.
+          </p>
+          <button
+            onClick={() => react.mutate()}
+            disabled={react.isPending}
+            className="w-full rounded-lg border border-primary/30 bg-primary/10 px-4 py-2.5 text-sm font-semibold text-primary hover:bg-primary/20 disabled:opacity-50"
+          >
+            {react.isPending ? "Resetting…" : "Reactivate my app device"}
+          </button>
         </div>
       </div>
       <style>{`.input{width:100%;border:1px solid var(--border);border-radius:.5rem;padding:.625rem .875rem;font-size:.875rem;background:var(--background);outline:none}.input:focus{border-color:var(--primary)}`}</style>
