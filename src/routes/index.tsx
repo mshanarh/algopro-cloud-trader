@@ -1,33 +1,31 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import heroPhone from "@/assets/hero-phone.png";
+import { useState } from "react";
+import appPreview from "@/assets/app-preview.jpg.asset.json";
 import {
   Cloud,
-  KeyRound,
-  ActivitySquare,
-  LineChart,
-  Palette,
+  Zap,
   ShieldCheck,
-  Smartphone,
-  Apple,
   Check,
+  X,
+  ChevronDown,
   ArrowRight,
+  Smartphone,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "EA Force — Host Forex EAs in the Cloud, control from your phone" },
+      { title: "EA Force — Convert your desktop EA to a mobile bot" },
       {
         name: "description",
         content:
-          "EA Force is a secure mobile hosting platform for MetaTrader EAs. Run MT4/MT5 bots 24/7 across 40,000+ brokers and control everything from your phone.",
+          "EA Force syncs your MT4/MT5 expert advisor signals to every connected mobile client in real time. Any broker, any device.",
       },
-      { property: "og:title", content: "EA Force — Cloud hosting for Forex EAs" },
-      {
-        property: "og:description",
-        content: "Run MetaTrader EAs 24/7 on secure cloud VPS. Control from your phone.",
-      },
-      { property: "og:image", content: heroPhone },
+      { property: "og:title", content: "EA Force — Cloud EA hosting for mobile traders" },
+      { property: "og:description", content: "Real-time EA + SL/TP sync to your clients' mobile app." },
+      { property: "og:image", content: appPreview.url },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: appPreview.url },
     ],
   }),
   component: Landing,
@@ -35,9 +33,9 @@ export const Route = createFileRoute("/")({
 
 function Logo() {
   return (
-    <Link to="/" className="flex items-center gap-2">
-      <span className="grid h-8 w-8 place-items-center rounded-lg bg-[image:var(--gradient-purple)] text-primary-foreground shadow-[var(--shadow-elegant)]">
-        <span className="text-sm font-black">A</span>
+    <Link to="/" className="flex items-center gap-2 text-white">
+      <span className="grid h-8 w-8 place-items-center rounded-lg bg-[image:var(--gradient-purple)] text-sm font-black text-primary-foreground">
+        A
       </span>
       <span className="text-lg font-bold tracking-tight">EA Force</span>
     </Link>
@@ -46,21 +44,16 @@ function Logo() {
 
 function Nav() {
   return (
-    <header className="absolute inset-x-0 top-0 z-20">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
-        <div className="text-white">
-          <Logo />
-        </div>
-        <nav className="flex items-center gap-2 sm:gap-4">
-          <a
-            href="#features"
-            className="hidden text-sm font-medium text-white/80 hover:text-white sm:inline"
-          >
-            Features
-          </a>
+    <header className="sticky top-0 z-30 border-b border-white/5 bg-black/70 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
+        <Logo />
+        <nav className="flex items-center gap-3">
+          <a href="#features" className="hidden text-sm text-white/70 hover:text-white sm:inline">Features</a>
+          <a href="#compare" className="hidden text-sm text-white/70 hover:text-white sm:inline">Compare</a>
+          <a href="#faq" className="hidden text-sm text-white/70 hover:text-white sm:inline">FAQ</a>
           <Link
             to="/login"
-            className="rounded-md border border-white/20 px-4 py-2 text-sm font-medium text-white hover:bg-white/10"
+            className="rounded-md border border-white/15 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/10"
           >
             Login
           </Link>
@@ -72,199 +65,195 @@ function Nav() {
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden bg-[image:var(--gradient-navy)] pb-24 pt-28 text-white sm:pb-32 sm:pt-32">
+    <section className="relative overflow-hidden px-5 pb-16 pt-14 text-white">
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-32 top-10 h-[480px] w-[480px] rounded-full opacity-30 blur-3xl"
-        style={{ background: "radial-gradient(closest-side, var(--accent), transparent)" }}
+        className="pointer-events-none absolute left-1/2 top-0 h-[520px] w-[520px] -translate-x-1/2 rounded-full opacity-20 blur-3xl"
+        style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }}
       />
-      <Nav />
-      <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 lg:grid-cols-[1.1fr_0.9fr]">
-        <div>
-          <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur">
-            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-            Trusted by traders in 40,000+ brokers
-          </span>
-          <h1 className="text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
-            Host Your Forex EAs in the{" "}
-            <span className="bg-gradient-to-r from-accent to-[oklch(0.78_0.15_180)] bg-clip-text text-transparent">
-              Cloud
-            </span>{" "}
-            with EA Force
-          </h1>
-          <p className="mt-5 max-w-xl text-base text-white/75 sm:text-lg">
-            A secure mobile hosting platform that lets you run MetaTrader EAs 24/7 and control
-            everything from your phone. Supports 40,000+ MT4/MT5 brokers worldwide.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-2 rounded-lg bg-[image:var(--gradient-purple)] px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-elegant)] transition hover:opacity-95"
-            >
-              Get Started <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              to="/download"
-              className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white backdrop-blur hover:bg-white/10"
-            >
-              <Smartphone className="h-4 w-4" /> <Apple className="h-4 w-4" /> Download App
-            </Link>
-
-          </div>
-          <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-xs text-white/70">
-            {["24/7 uptime", "Bank-grade encryption", "No phone battery drain"].map((t) => (
-              <span key={t} className="inline-flex items-center gap-1.5">
-                <Check className="h-3.5 w-3.5 text-accent" /> {t}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div className="relative mx-auto w-full max-w-md">
-          <div
-            aria-hidden
-            className="absolute inset-0 -z-10 rounded-[40px] opacity-60 blur-3xl"
-            style={{ background: "var(--gradient-purple)" }}
-          />
-          <img
-            src={heroPhone}
-            alt="EA Force mobile app showing the Bot Console with a glowing teal bot icon"
-            width={1024}
-            height={1280}
-            className="mx-auto w-full max-w-sm drop-shadow-2xl"
-          />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function TrustBar() {
-  const brokers = ["IC Markets", "Exness", "FTMO", "XM", "Pepperstone"];
-  return (
-    <section className="bg-[image:var(--gradient-navy)] text-white/80">
-      <div className="mx-auto flex max-w-6xl flex-col items-center gap-5 px-5 py-10 text-center">
-        <p className="text-xs font-semibold uppercase tracking-widest text-white/60">
-          Compatible with all major brokers — 40,000+ supported
+      <div className="mx-auto max-w-3xl text-center">
+        <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/70">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          Real-time EA sync for mobile
+        </span>
+        <h1 className="text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
+          Convert your desktop EA <br className="hidden sm:block" /> to a mobile bot
+        </h1>
+        <p className="mx-auto mt-4 max-w-xl text-base text-white/70">
+          EA Force streams your MT4/MT5 signals — including SL/TP updates — to every connected
+          client's phone in real time.
         </p>
-        <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
-          {brokers.map((b) => (
-            <span key={b} className="text-base font-semibold text-white/80 sm:text-lg">
-              {b}
-            </span>
-          ))}
-          <span className="text-sm text-white/50">+ 40,000 others</span>
+        <div className="mt-7 flex flex-wrap justify-center gap-3">
+          <Link
+            to="/login"
+            className="inline-flex items-center gap-2 rounded-lg bg-[image:var(--gradient-purple)] px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-elegant)] hover:opacity-95"
+          >
+            Get Started <ArrowRight className="h-4 w-4" />
+          </Link>
+          <Link
+            to="/download"
+            className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10"
+          >
+            <Smartphone className="h-4 w-4" /> Download App
+          </Link>
         </div>
       </div>
-    </section>
 
+      <div className="mx-auto mt-12 max-w-sm">
+        <div
+          aria-hidden
+          className="absolute inset-x-0 -z-10 mx-auto h-72 w-72 rounded-full opacity-40 blur-3xl"
+          style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }}
+        />
+        <img
+          src={appPreview.url}
+          alt="EA Force mobile app showing the Sniper Maestro bot with Delete, Play and Symbols controls"
+          className="mx-auto w-full rounded-3xl border border-white/10 shadow-2xl shadow-emerald-500/10"
+          loading="eager"
+        />
+      </div>
+    </section>
   );
 }
 
-function HowItWorks() {
-  const steps = [
-    {
-      n: "01",
-      title: "Upload Your EA",
-      desc: "Drop your MT4/MT5 expert advisor into EA Force's secure cloud workspace.",
-    },
-    {
-      n: "02",
-      title: "Generate License",
-      desc: "Create license keys tied to a username, EA, and expiry — share with clients.",
-    },
-    {
-      n: "03",
-      title: "Trade 24/7",
-      desc: "Your EA runs on a dedicated VPS. Monitor and control it from your phone.",
-    },
-  ];
-  return (
-    <section className="bg-[image:var(--gradient-navy)] py-20 text-white">
-      <div className="mx-auto max-w-6xl px-5">
-        <div className="mb-12 text-center">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">How it works</h2>
-          <p className="mt-3 text-white/70">Three steps from EA file to live trading.</p>
-        </div>
-        <div className="grid gap-6 md:grid-cols-3">
-          {steps.map((s) => (
-            <div
-              key={s.n}
-              className="group rounded-2xl border border-white/10 bg-white/5 p-7 backdrop-blur transition hover:-translate-y-1 hover:border-accent/40"
-            >
-              <div className="mb-5 text-sm font-bold text-accent">{s.n}</div>
-              <h3 className="mb-2 text-lg font-semibold">{s.title}</h3>
-              <p className="text-sm text-white/70">{s.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-
-  );
-}
-
-function Features() {
+function WhyChoose() {
   const items = [
-    { icon: Cloud, title: "Cloud Hosting", desc: "Dedicated VPS keeps your EA online 24/7." },
-    { icon: KeyRound, title: "License Control", desc: "Issue, extend, and revoke keys instantly." },
-    { icon: ActivitySquare, title: "Live Trade Logs", desc: "Stream every order to your phone in real time." },
-    { icon: LineChart, title: "Chart Scanner", desc: "Scan pairs and surface signals as they form." },
-    { icon: Palette, title: "Custom Branding", desc: "White-label the bot console for your brand." },
-    { icon: ShieldCheck, title: "Secure MT4/MT5", desc: "Encrypted credentials. Works with any broker." },
+    {
+      icon: Cloud,
+      title: "Cloud-Synced",
+      desc: "EA signals sync to all connected mobile clients in real-time.",
+    },
+    {
+      icon: Zap,
+      title: "Real-time SL/TP Sync",
+      desc: "Stop loss and take profit changes sync to all clients instantly.",
+    },
+    {
+      icon: ShieldCheck,
+      title: "Any Broker",
+      desc: "Works with every MT4/MT5 broker. No limitations.",
+    },
   ];
   return (
-    <section id="features" className="bg-[image:var(--gradient-navy)] py-20 text-white">
-      <div className="mx-auto max-w-6xl px-5">
-        <div className="mb-12 text-center">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Everything you need to run a Forex bot business</h2>
-        </div>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((it) => (
-            <div key={it.title} className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur transition hover:border-accent/50">
-              <div className="mb-4 grid h-11 w-11 place-items-center rounded-xl bg-accent/15 text-accent">
-                <it.icon className="h-5 w-5" />
-              </div>
-              <h3 className="mb-1.5 font-semibold">{it.title}</h3>
-              <p className="text-sm text-white/70">{it.desc}</p>
+    <section id="features" className="px-5 py-20 text-white">
+      <div className="mx-auto max-w-3xl text-center">
+        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Why choose EA Force?</h2>
+        <p className="mt-3 text-white/60">Convert your desktop EA to mobile with real-time SL/TP sync.</p>
+      </div>
+      <div className="mx-auto mt-12 max-w-2xl space-y-4">
+        {items.map((it) => (
+          <div
+            key={it.title}
+            className="flex items-start gap-4 rounded-2xl border border-white/5 bg-white/[0.03] p-5"
+          >
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/5 text-white/80">
+              <it.icon className="h-5 w-5" />
             </div>
-          ))}
-        </div>
+            <div>
+              <h3 className="text-lg font-semibold">{it.title}</h3>
+              <p className="mt-1 text-sm text-white/60">{it.desc}</p>
+            </div>
+          </div>
+        ))}
       </div>
     </section>
+  );
+}
 
+function Compare() {
+  const rows: Array<[string, boolean, boolean | "dim"]> = [
+    ["Real-time signal sync", true, false],
+    ["SL/TP sync", true, false],
+    ["Any broker", true, false],
+    ["No duplicate trades", true, false],
+    ["Multi-client support", true, "dim"],
+    ["Mobile app", true, false],
+  ];
+  return (
+    <section id="compare" className="px-5 py-20 text-white">
+      <div className="mx-auto max-w-3xl text-center">
+        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">EA Force vs Others</h2>
+        <p className="mt-3 text-white/60">See what makes us different</p>
+      </div>
+      <div className="mx-auto mt-10 max-w-2xl overflow-hidden rounded-2xl border border-white/5 bg-white/[0.03]">
+        <div className="grid grid-cols-3 gap-2 px-5 py-4 text-sm font-semibold">
+          <div>Feature</div>
+          <div className="text-center">EA Force</div>
+          <div className="text-center text-white/50">Others</div>
+        </div>
+        {rows.map(([label, us, them]) => (
+          <div key={label as string} className="grid grid-cols-3 items-center gap-2 border-t border-white/5 px-5 py-4 text-sm">
+            <div className="font-medium">{label}</div>
+            <div className="flex justify-center">{us ? <Check className="h-5 w-5 text-emerald-400" /> : <X className="h-5 w-5 text-red-400" />}</div>
+            <div className="flex justify-center">
+              {them === true ? (
+                <Check className="h-5 w-5 text-emerald-400" />
+              ) : them === "dim" ? (
+                <Check className="h-5 w-5 text-white/30" />
+              ) : (
+                <X className="h-5 w-5 text-red-400" />
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function FAQItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-t border-white/5 first:border-t-0">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
+      >
+        <span className="text-sm font-semibold text-white sm:text-base">{q}</span>
+        <ChevronDown className={`h-5 w-5 shrink-0 text-white/60 transition ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && <p className="px-5 pb-4 text-sm text-white/70">{a}</p>}
+    </div>
+  );
+}
+
+function FAQ() {
+  const faqs = [
+    { q: "Which brokers are compatible?", a: "Every MT4 and MT5 broker — over 40,000 worldwide. No restrictions." },
+    { q: "How does the EA connection work?", a: "Upload your EA to EA Force, generate a licence key and share it with your client. Their mobile app connects and mirrors trades." },
+    { q: "Do SL/TP changes sync to client mobile apps?", a: "Yes. Any SL/TP edit on the master EA is pushed to every connected mobile client instantly." },
+    { q: "How do clients access my EA?", a: "You issue them a licence key from your portal. They enter it in the EA Force mobile app and are connected." },
+    { q: "Is EA Force a trading robot?", a: "No — EA Force is the delivery layer. Your EA is the robot; we make it accessible on mobile." },
+  ];
+  return (
+    <section id="faq" className="px-5 py-20 text-white">
+      <div className="mx-auto max-w-3xl text-center">
+        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Frequently Asked Questions</h2>
+        <p className="mt-3 text-white/60">Everything you need to know</p>
+      </div>
+      <div className="mx-auto mt-10 max-w-2xl overflow-hidden rounded-2xl border border-white/5 bg-white/[0.03]">
+        {faqs.map((f) => <FAQItem key={f.q} {...f} />)}
+      </div>
+    </section>
   );
 }
 
 function CTA() {
   return (
-    <section id="get-started" className="relative overflow-hidden bg-[image:var(--gradient-navy)] py-20 text-white">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -left-40 -top-20 h-[420px] w-[420px] rounded-full opacity-30 blur-3xl"
-        style={{ background: "radial-gradient(closest-side, var(--accent), transparent)" }}
-      />
-      <div className="mx-auto max-w-3xl px-5 text-center">
-        <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">
-          Ready to Automate Your Forex Business?
-        </h2>
-        <p className="mx-auto mt-4 max-w-xl text-white/75">
+    <section className="px-5 py-20 text-white">
+      <div className="mx-auto max-w-2xl rounded-3xl border border-white/10 bg-[image:var(--gradient-purple)] p-10 text-center shadow-[var(--shadow-elegant)]">
+        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Ready to go mobile?</h2>
+        <p className="mx-auto mt-3 max-w-md text-white/85">
           Launch your white-label EA hosting in minutes. Your traders get a mobile control panel.
         </p>
-        <div id="download" className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link
-            to="/login"
-            className="inline-flex items-center gap-2 rounded-lg bg-[image:var(--gradient-purple)] px-7 py-3 text-sm font-semibold shadow-[var(--shadow-elegant)] hover:opacity-95"
-          >
+        <div className="mt-7 flex flex-wrap justify-center gap-3">
+          <Link to="/login" className="inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 text-sm font-semibold text-black hover:bg-white/90">
             Start Now <ArrowRight className="h-4 w-4" />
           </Link>
-          <Link
-            to="/download"
-            className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-7 py-3 text-sm font-semibold backdrop-blur hover:bg-white/10"
-          >
-            <Smartphone className="h-4 w-4" /> Download EA Force App
+          <Link to="/download" className="inline-flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-6 py-3 text-sm font-semibold text-white hover:bg-white/20">
+            <Smartphone className="h-4 w-4" /> Download App
           </Link>
         </div>
-
       </div>
     </section>
   );
@@ -272,11 +261,11 @@ function CTA() {
 
 function Footer() {
   return (
-    <footer className="bg-[image:var(--gradient-navy)] text-white/70">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 border-t border-white/10 px-5 py-8 sm:flex-row">
+    <footer className="text-white/60">
+      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 border-t border-white/5 px-5 py-8 sm:flex-row">
         <div className="flex items-center gap-3">
           <Logo />
-          <span className="text-sm text-white/50">© 2026</span>
+          <span className="text-sm text-white/40">© 2026</span>
         </div>
         <nav className="flex items-center gap-6 text-sm">
           <a href="#" className="hover:text-white">Terms</a>
@@ -288,14 +277,14 @@ function Footer() {
   );
 }
 
-
 function Landing() {
   return (
-    <main>
+    <main className="min-h-screen bg-black">
+      <Nav />
       <Hero />
-      <TrustBar />
-      <HowItWorks />
-      <Features />
+      <WhyChoose />
+      <Compare />
+      <FAQ />
       <CTA />
       <Footer />
     </main>
