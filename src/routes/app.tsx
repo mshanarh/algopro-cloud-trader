@@ -9,7 +9,7 @@ import {
   LineChart, Database, Target, Trash2, BarChart3, Plus, Palette, Film, X,
   Upload, Send, ScanLine, ArrowLeft, FileText, AlertTriangle,
 } from "lucide-react";
-import { validateLicense, validateMentor, checkAppAccess } from "@/lib/portal.functions";
+import { validateLicense, validateMentor, checkAppAccess, reactivateAppByEmail } from "@/lib/portal.functions";
 import { analyzeChart } from "@/lib/scanner.functions";
 
 export const Route = createFileRoute("/app")({
