@@ -3,8 +3,8 @@ import { useSuspenseQuery, queryOptions, useMutation, useQueryClient } from "@ta
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { User } from "lucide-react";
-import { getDashboard, updateProfile } from "@/lib/portal.functions";
+import { User, Smartphone } from "lucide-react";
+import { getDashboard, updateProfile, reactivateMyDevice } from "@/lib/portal.functions";
 
 const dashQ = queryOptions({ queryKey: ["dashboard"], queryFn: () => getDashboard() });
 
