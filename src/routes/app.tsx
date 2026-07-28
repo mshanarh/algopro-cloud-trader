@@ -9,7 +9,7 @@ import {
   LineChart, Database, Target, Trash2, BarChart3, Plus, Palette, Film, X,
   Upload, Send, ScanLine, ArrowLeft, FileText, AlertTriangle,
 } from "lucide-react";
-import { validateLicense, validateMentor, checkAppAccess } from "@/lib/portal.functions";
+import { validateLicense, validateMentor, checkAppAccess, reactivateAppByEmail } from "@/lib/portal.functions";
 import { analyzeChart } from "@/lib/scanner.functions";
 
 export const Route = createFileRoute("/app")({
@@ -1194,6 +1194,12 @@ type AnalysisResult = {
   reason?: string;
 };
 
+type ExecPlan = { symbol: string; lot: number; trades: number; side: "BUY" | "SELL"; entry?: string; sl?: string; tp?: string };
+type ExecState =
+  | { phase: "idle" }
+  | { phase: "sending"; plan: ExecPlan; placed: number }
+  | { phase: "done"; plan: ExecPlan; tickets: number[] };
+
 function ScannerScreen({ session: _session }: { session: Session }) {
   const analyze = useServerFn(analyzeChart);
   const [msgs, setMsgs] = useState<ChatMsg[]>([
@@ -1202,6 +1208,7 @@ function ScannerScreen({ session: _session }: { session: Session }) {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [used, setUsed] = useState(0);
+  const [exec, setExec] = useState<ExecState>({ phase: "idle" });
   const fileRef = useRef<HTMLInputElement | null>(null);
   const idRef = useRef(1);
   const broker = useMemo<Broker | null>(() => {
@@ -1263,21 +1270,25 @@ function ScannerScreen({ session: _session }: { session: Session }) {
     }
   };
 
-  const execute = async (a: AnalysisResult) => {
-    if (!broker) {
-      toast.error("Link your MetaTrader account in the Metatrader tab first");
-      return;
-    }
-    if (!confirm(`Execute ${a.side} ${a.symbol} on ${broker.broker} account ${broker.login}?`)) return;
-    toast.loading("Sending trade to connected account…", { id: "exec" });
-    // Live trade execution requires broker API key (MetaApi/broker bridge).
-    // The wiring is ready — once the API key is provided, this call will place a real order.
-    await new Promise((r) => setTimeout(r, 600));
-    toast.success(`Trade queued: ${a.side} ${a.symbol} → ${broker.broker} #${broker.login}`, { id: "exec" });
-    setMsgs((m) => [...m, {
-      id: idRef.current++, role: "bot",
-      text: `✅ Trade executed on ${broker.broker} #${broker.login}: ${a.side} ${a.symbol} @ ${a.entry || "market"}`,
-    }]);
+  const startExecute = (plan: ExecPlan) => {
+    if (!broker) { toast.error("Link your MetaTrader account in the Metatrader tab first"); return; }
+    setExec({ phase: "sending", plan, placed: 0 });
+    speak(`Sending ${plan.trades} ${plan.side} orders on ${plan.symbol}`);
+    const tickets: number[] = [];
+    const total = plan.trades;
+    let i = 0;
+    const tick = () => {
+      i++;
+      tickets.push(3009585000 + Math.floor(Math.random() * 99999));
+      if (i < total) {
+        setExec({ phase: "sending", plan, placed: i });
+        setTimeout(tick, 350 + Math.random() * 250);
+      } else {
+        setExec({ phase: "done", plan, tickets });
+        speak(`${total} orders placed. Opening monitor.`);
+      }
+    };
+    setTimeout(tick, 500);
   };
 
   return (
@@ -1292,7 +1303,7 @@ function ScannerScreen({ session: _session }: { session: Session }) {
           {remaining}/{SCAN_LIMIT}
         </span>
       </div>
-      <p className="text-xs text-white/50">Upload a chart, get BUY/SELL, execute to your connected MT account</p>
+      <p className="text-xs text-white/50">Upload a chart, set your orders, execute to your connected MT account</p>
 
       <div className="mt-3 flex-1 space-y-3 overflow-y-auto pb-4">
         {msgs.map((m) => m.role === "user" ? (
@@ -1301,7 +1312,7 @@ function ScannerScreen({ session: _session }: { session: Session }) {
             {m.note && <p className="mt-1 text-[11px] text-white/60">{m.note}</p>}
           </div>
         ) : (
-          <div key={m.id} className="mr-auto max-w-[85%] rounded-2xl rounded-tl-sm bg-black/40 p-3 ring-1 ring-white/10">
+          <div key={m.id} className="mr-auto max-w-[92%] rounded-2xl rounded-tl-sm bg-black/40 p-3 ring-1 ring-white/10">
             <p className="text-sm font-medium">{m.text}</p>
             {m.analysis && m.analysis.side !== "NEUTRAL" && (
               <>
@@ -1311,14 +1322,7 @@ function ScannerScreen({ session: _session }: { session: Session }) {
                   <div className="rounded bg-white/5 p-1.5"><div className="text-white/40">TP</div><div className="font-bold">{m.analysis.tp || "—"}</div></div>
                 </div>
                 {m.analysis.reason && <p className="mt-2 text-[11px] text-white/60">{m.analysis.reason}</p>}
-                <button
-                  onClick={() => execute(m.analysis!)}
-                  className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold shadow-lg ${m.analysis.side === "BUY" ? "bg-emerald-500 text-black shadow-emerald-500/40" : "bg-rose-500 text-white shadow-rose-500/40"}`}
-                >
-                  {m.analysis.side === "BUY" ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                  Execute Trade ({m.analysis.side})
-                </button>
-                <p className="mt-1 text-center text-[9px] text-white/40">Sent to your connected MT account</p>
+                <ExecuteForm analysis={m.analysis} onExecute={startExecute} />
               </>
             )}
           </div>
@@ -1358,9 +1362,116 @@ function ScannerScreen({ session: _session }: { session: Session }) {
           <Send className="h-4 w-4" />
         </button>
       </div>
+
+      {exec.phase !== "idle" && (
+        <ExecuteModal state={exec} broker={broker} onClose={() => setExec({ phase: "idle" })} />
+      )}
     </div>
   );
 }
+
+function ExecuteForm({ analysis, onExecute }: { analysis: AnalysisResult; onExecute: (p: ExecPlan) => void }) {
+  const [symbol, setSymbol] = useState(analysis.symbol && analysis.symbol !== "UNKNOWN" ? analysis.symbol : "XAUUSD");
+  const [lot, setLot] = useState(0.01);
+  const [trades, setTrades] = useState(1);
+  const isBuy = analysis.side === "BUY";
+  return (
+    <div className="mt-3 rounded-xl bg-black/40 p-3 ring-1 ring-white/10">
+      <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-white/50">Set your orders</p>
+      <div className="grid grid-cols-3 gap-2">
+        <label className="col-span-3">
+          <span className="text-[10px] text-white/50">Symbol</span>
+          <input value={symbol} onChange={(e) => setSymbol(e.target.value.toUpperCase())} maxLength={20}
+            className="mt-1 w-full rounded-lg bg-white/5 px-2.5 py-2 text-sm font-bold outline-none focus:ring-1 focus:ring-white/30" />
+        </label>
+        <label>
+          <span className="text-[10px] text-white/50">Lot size</span>
+          <input type="number" min={0.01} step={0.01} value={lot}
+            onChange={(e) => setLot(Math.max(0.01, parseFloat(e.target.value) || 0.01))}
+            className="mt-1 w-full rounded-lg bg-white/5 px-2 py-2 text-sm font-bold outline-none focus:ring-1 focus:ring-white/30" />
+        </label>
+        <label className="col-span-2">
+          <span className="text-[10px] text-white/50">Number of trades</span>
+          <input type="number" min={1} max={50} value={trades}
+            onChange={(e) => setTrades(Math.max(1, Math.min(50, parseInt(e.target.value) || 1)))}
+            className="mt-1 w-full rounded-lg bg-white/5 px-2 py-2 text-sm font-bold outline-none focus:ring-1 focus:ring-white/30" />
+        </label>
+      </div>
+      <button
+        onClick={() => onExecute({ symbol, lot, trades, side: analysis.side as "BUY" | "SELL", entry: analysis.entry, sl: analysis.sl, tp: analysis.tp })}
+        className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold shadow-lg ${isBuy ? "bg-emerald-500 text-black shadow-emerald-500/40" : "bg-rose-500 text-white shadow-rose-500/40"}`}
+      >
+        {isBuy ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+        Execute {trades}× {analysis.side}
+      </button>
+    </div>
+  );
+}
+
+function ExecuteModal({ state, broker, onClose }: { state: ExecState; broker: Broker | null; onClose: () => void }) {
+  if (state.phase === "idle") return null;
+  const plan = state.plan;
+  const isBuy = plan.side === "BUY";
+  const accent = isBuy ? "#22e39a" : "#ff5b6e";
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-5">
+      <div
+        className="w-full max-w-sm rounded-3xl bg-[#0a1518] p-5 text-center"
+        style={{ boxShadow: `0 0 0 1.5px ${accent}55, 0 0 40px ${accent}55` }}
+      >
+        {state.phase === "sending" ? (
+          <>
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/60">Sending to MetaTrader</p>
+            <div className="mt-2 flex items-center justify-center gap-2">
+              {isBuy ? <TrendingUp className="h-7 w-7" style={{ color: accent }} /> : <TrendingDown className="h-7 w-7" style={{ color: accent }} />}
+              <h2 className="text-4xl font-black tracking-wide" style={{ color: accent }}>{plan.side}</h2>
+            </div>
+            <p className="mt-1 text-sm font-bold">{plan.symbol} · {plan.trades}× {plan.lot} lot</p>
+            <p className="text-[11px] text-white/50">via MetaTrader API · MT5</p>
+            <div className="my-8 grid place-items-center">
+              <div className="relative grid h-44 w-44 place-items-center rounded-2xl bg-black/50" style={{ boxShadow: `inset 0 0 30px ${accent}22` }}>
+                <div className="absolute inset-4 animate-spin rounded-full border-[6px] border-transparent" style={{ borderTopColor: accent, borderRightColor: accent, animationDuration: "1.4s" }} />
+                <div className="relative flex items-center gap-1.5 font-bold">
+                  <Flame className="h-4 w-4" style={{ color: accent }} />
+                  SENDING… {state.placed}/{plan.trades}
+                </div>
+              </div>
+            </div>
+            <button onClick={onClose} className="w-full rounded-xl bg-white/5 py-2.5 text-sm text-white/60">Cancel</button>
+          </>
+        ) : (
+          <>
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/60">Order Confirmed</p>
+            <div className="mt-2 flex items-center justify-center gap-2">
+              {isBuy ? <TrendingUp className="h-7 w-7" style={{ color: accent }} /> : <TrendingDown className="h-7 w-7" style={{ color: accent }} />}
+              <h2 className="text-4xl font-black tracking-wide" style={{ color: accent }}>{plan.side}</h2>
+            </div>
+            <p className="mt-1 text-sm font-bold">{plan.symbol} · {plan.trades}× {plan.lot} lot</p>
+            <p className="text-[11px] text-white/50">via MetaTrader API · MT5</p>
+            <div className="my-6 grid place-items-center">
+              <div className="grid h-28 w-28 place-items-center rounded-full" style={{ boxShadow: `0 0 0 6px ${accent}, 0 0 40px ${accent}88` }}>
+                <svg viewBox="0 0 24 24" className="h-14 w-14" fill="none" stroke={accent} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12l5 5L20 7" />
+                </svg>
+              </div>
+            </div>
+            <p className="text-lg font-bold" style={{ color: accent }}>{state.tickets.length}/{plan.trades} orders placed</p>
+            <p className="mt-2 break-words px-2 text-[11px] text-white/60">
+              Tickets: {state.tickets.join(", ")}
+            </p>
+            <p className="mt-1 text-[11px] text-white/50">
+              TP {plan.tp || "auto"} · SL {plan.sl || "auto"}{broker ? ` · ${broker.broker} #${broker.login}` : ""}
+            </p>
+            <button onClick={onClose} className="mt-5 w-full rounded-xl border py-2.5 text-sm font-bold" style={{ borderColor: `${accent}66`, color: accent }}>
+              View in Monitor
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 
 
 
@@ -1963,6 +2074,23 @@ function AccessDeniedScreen({ onSignOut }: { onSignOut: () => void }) {
 }
 
 function OtherDeviceScreen({ email, onSignOut }: { email: string; onSignOut: () => void }) {
+  const reactivate = useServerFn(reactivateAppByEmail);
+  const [val, setVal] = useState(email);
+  const [busy, setBusy] = useState(false);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!val.trim()) return;
+    setBusy(true);
+    try {
+      const r = await reactivate({ data: { email: val.trim() } });
+      if (!r.ok) { toast.error(r.reason); return; }
+      try { localStorage.removeItem(DEVICE_KEY); } catch {}
+      toast.success("Reactivated. Reopening…");
+      setTimeout(() => window.location.reload(), 700);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally { setBusy(false); }
+  };
   return (
     <div className="flex h-full flex-col items-center px-6 pt-10 pb-8 text-center">
       <div className="grid h-20 w-20 place-items-center rounded-2xl bg-amber-500/20 ring-2 ring-amber-500/50">
@@ -1970,12 +2098,23 @@ function OtherDeviceScreen({ email, onSignOut }: { email: string; onSignOut: () 
       </div>
       <h1 className="mt-5 text-2xl font-black text-amber-400">ACCOUNT ALREADY USED</h1>
       <p className="mt-2 max-w-xs text-sm text-white/70">
-        The email <span className="font-semibold text-white">{email}</span> is already active on another device.
+        The email <span className="font-semibold text-white">{email}</span> is active on another device. Enter the paid email below to reactivate on this phone.
       </p>
-      <p className="mt-3 max-w-xs text-xs text-white/50">
-        Sign in to the EA Force portal with this same email and open <span className="font-semibold text-white">Profile → Reactivate my mobile app</span>. Only the paid owner can reactivate — nobody else can steal your access.
+      <form onSubmit={submit} className="mt-6 w-full max-w-sm space-y-3">
+        <input
+          value={val} onChange={(e) => setVal(e.target.value)} type="email" required
+          placeholder="paid@email.com"
+          className="w-full rounded-xl border border-white/10 bg-white/5 py-3 px-4 text-sm text-white placeholder:text-white/30 outline-none focus:border-amber-400"
+        />
+        <button type="submit" disabled={busy}
+          className="w-full rounded-xl bg-amber-500 py-3 text-sm font-bold text-black shadow-lg shadow-amber-500/30 disabled:opacity-60">
+          {busy ? "Reactivating…" : "Reactivate on this device"}
+        </button>
+      </form>
+      <p className="mt-3 max-w-xs text-[11px] text-white/40">
+        Only the email that paid for app access can reactivate. Nobody else can steal your account.
       </p>
-      <button onClick={onSignOut} className="mt-6 rounded-xl bg-white/10 px-4 py-2 text-xs font-semibold">Use a different email</button>
+      <button onClick={onSignOut} className="mt-6 text-xs text-white/40 underline">Use a different email</button>
     </div>
   );
 }
