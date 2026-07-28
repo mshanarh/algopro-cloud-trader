@@ -121,6 +121,22 @@ export const reactivateMyDevice = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const reactivateAppByEmail = createServerFn({ method: "POST" })
+  .inputValidator((input) => z.object({
+    email: z.string().trim().email().max(255),
+  }).parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const email = data.email.toLowerCase();
+    const { data: row } = await (supabaseAdmin as any)
+      .from("app_access").select("paid").eq("email", email).maybeSingle();
+    if (!row?.paid) return { ok: false as const, reason: "This email hasn't paid for app access." };
+    await (supabaseAdmin as any).from("app_access")
+      .update({ device_id: null, updated_at: new Date().toISOString() })
+      .eq("email", email);
+    return { ok: true as const };
+  });
+
 export const adminSetAppAccess = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({
