@@ -1963,6 +1963,23 @@ function AccessDeniedScreen({ onSignOut }: { onSignOut: () => void }) {
 }
 
 function OtherDeviceScreen({ email, onSignOut }: { email: string; onSignOut: () => void }) {
+  const reactivate = useServerFn(reactivateAppByEmail);
+  const [val, setVal] = useState(email);
+  const [busy, setBusy] = useState(false);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!val.trim()) return;
+    setBusy(true);
+    try {
+      const r = await reactivate({ data: { email: val.trim() } });
+      if (!r.ok) { toast.error(r.reason); return; }
+      try { localStorage.removeItem(DEVICE_KEY); } catch {}
+      toast.success("Reactivated. Reopening…");
+      setTimeout(() => window.location.reload(), 700);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally { setBusy(false); }
+  };
   return (
     <div className="flex h-full flex-col items-center px-6 pt-10 pb-8 text-center">
       <div className="grid h-20 w-20 place-items-center rounded-2xl bg-amber-500/20 ring-2 ring-amber-500/50">
@@ -1970,12 +1987,23 @@ function OtherDeviceScreen({ email, onSignOut }: { email: string; onSignOut: () 
       </div>
       <h1 className="mt-5 text-2xl font-black text-amber-400">ACCOUNT ALREADY USED</h1>
       <p className="mt-2 max-w-xs text-sm text-white/70">
-        The email <span className="font-semibold text-white">{email}</span> is already active on another device.
+        The email <span className="font-semibold text-white">{email}</span> is active on another device. Enter the paid email below to reactivate on this phone.
       </p>
-      <p className="mt-3 max-w-xs text-xs text-white/50">
-        Sign in to the EA Force portal with this same email and open <span className="font-semibold text-white">Profile → Reactivate my mobile app</span>. Only the paid owner can reactivate — nobody else can steal your access.
+      <form onSubmit={submit} className="mt-6 w-full max-w-sm space-y-3">
+        <input
+          value={val} onChange={(e) => setVal(e.target.value)} type="email" required
+          placeholder="paid@email.com"
+          className="w-full rounded-xl border border-white/10 bg-white/5 py-3 px-4 text-sm text-white placeholder:text-white/30 outline-none focus:border-amber-400"
+        />
+        <button type="submit" disabled={busy}
+          className="w-full rounded-xl bg-amber-500 py-3 text-sm font-bold text-black shadow-lg shadow-amber-500/30 disabled:opacity-60">
+          {busy ? "Reactivating…" : "Reactivate on this device"}
+        </button>
+      </form>
+      <p className="mt-3 max-w-xs text-[11px] text-white/40">
+        Only the email that paid for app access can reactivate. Nobody else can steal your account.
       </p>
-      <button onClick={onSignOut} className="mt-6 rounded-xl bg-white/10 px-4 py-2 text-xs font-semibold">Use a different email</button>
+      <button onClick={onSignOut} className="mt-6 text-xs text-white/40 underline">Use a different email</button>
     </div>
   );
 }
