@@ -57,6 +57,7 @@ const VIDEO_KEY = "algopro.bgvideo";
 const BROKER_KEY = "algopro.broker";
 const PAIRS_KEY = "algopro.pairs";
 const STYLE_KEY = "algopro.style";
+const EXEC_TRADES_KEY = "algopro.execTrades";
 
 type Pair = { symbol: string; lot: number; trades: number };
 type HomeVariant = "v1" | "v2" | "v3" | "v4" | "v5" | "v6";
@@ -66,6 +67,7 @@ const DEFAULT_STYLE: UIStyle = { home: "v4", nav: "v1" };
 const SCAN_LIMIT = 50;
 const SCAN_COUNT_KEY = "algopro.scans";
 const DEVICE_KEY = "ea.device";
+
 
 function speak(text: string) {
   try {
