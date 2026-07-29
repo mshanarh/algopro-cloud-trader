@@ -881,38 +881,38 @@ function TradeBubble({
   );
 }
 
-function TradeLogs({ running, symbols }: { running: boolean; symbols: string[] }) {
+function TradeLogs({ running, symbols: _symbols }: { running: boolean; symbols: string[] }) {
   const [logs, setLogs] = useState<Trade[]>([]);
-  const idRef = useRef(1);
   useEffect(() => {
-    if (!running) return;
-    const pool = symbols.length ? symbols : ["EURUSD", "XAUUSD"];
-    const t = setInterval(() => {
-      const sym = pool[Math.floor(Math.random() * pool.length)];
-      const side: "BUY" | "SELL" = Math.random() > 0.5 ? "BUY" : "SELL";
-      setLogs((p) => [{
-        id: idRef.current++, symbol: sym, side,
-        lot: +(Math.random() * 0.5 + 0.01).toFixed(2),
-        price: +(1 + Math.random() * 2000).toFixed(2),
-        pnl: +(Math.random() * 80 - 30).toFixed(2),
-        at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-      }, ...p].slice(0, 15));
-    }, 2200);
-    return () => clearInterval(t);
-  }, [running, symbols]);
+    const load = () => {
+      try {
+        const raw = localStorage.getItem(EXEC_TRADES_KEY);
+        setLogs(raw ? (JSON.parse(raw) as Trade[]) : []);
+      } catch { setLogs([]); }
+    };
+    load();
+    const on = () => load();
+    window.addEventListener("ea:exec-trades", on);
+    window.addEventListener("storage", on);
+    const t = setInterval(load, 2500);
+    return () => {
+      window.removeEventListener("ea:exec-trades", on);
+      window.removeEventListener("storage", on);
+      clearInterval(t);
+    };
+  }, []);
 
   return (
     <div className="relative mt-6 w-full max-w-[340px] rounded-2xl border border-white/10 bg-black/40 p-3 text-left">
       <div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-wider text-white/60">
         <FileText className="h-3.5 w-3.5" style={{ color: "var(--app-accent)" }} />
-        Trade logs
+        My Executed Trades
         {running && <span className="ml-auto inline-flex items-center gap-1 text-emerald-300">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> live
         </span>}
       </div>
       <div className="max-h-44 space-y-1.5 overflow-y-auto pr-1">
-        {!running && <p className="py-3 text-center text-[11px] text-white/40">Bot is stopped</p>}
-        {running && logs.length === 0 && <p className="py-3 text-center text-[11px] text-white/40">Waiting for trades…</p>}
+        {logs.length === 0 && <p className="py-3 text-center text-[11px] text-white/40">No trades executed yet. Use Scanner to execute a signal.</p>}
         {logs.map((t) => (
           <div key={t.id} className="flex items-center gap-2 rounded-lg bg-white/[0.04] px-2 py-1.5 text-[11px]">
             {t.side === "BUY"
@@ -921,10 +921,7 @@ function TradeLogs({ running, symbols }: { running: boolean; symbols: string[] }
             <span className="font-semibold">{t.symbol}</span>
             <span className="text-white/50">{t.side} {t.lot}</span>
             <span className="ml-auto font-mono tabular-nums">
-              <span className={t.pnl >= 0 ? "text-emerald-300" : "text-rose-300"}>
-                {t.pnl >= 0 ? "+" : ""}{t.pnl.toFixed(2)}
-              </span>
-              <span className="ml-2 text-white/40">{t.at}</span>
+              <span className="text-white/40">{t.at}</span>
             </span>
           </div>
         ))}
@@ -932,6 +929,7 @@ function TradeLogs({ running, symbols }: { running: boolean; symbols: string[] }
     </div>
   );
 }
+
 
 
 function PillBtn({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
