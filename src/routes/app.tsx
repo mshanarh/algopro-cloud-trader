@@ -1239,17 +1239,14 @@ type ExecState =
   | { phase: "sending"; plan: ExecPlan; placed: number }
   | { phase: "done"; plan: ExecPlan; tickets: number[] };
 
-function ScannerScreen({ session: _session }: { session: Session }) {
+function ScannerScreen({ session }: { session: Session }) {
   const analyze = useServerFn(analyzeChart);
-  const [msgs, setMsgs] = useState<ChatMsg[]>([
-    { id: 0, role: "bot", text: "Upload a chart screenshot and I'll tell you BUY or SELL." },
-  ]);
-  const [note, setNote] = useState("");
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [used, setUsed] = useState(0);
   const [exec, setExec] = useState<ExecState>({ phase: "idle" });
-  const fileRef = useRef<HTMLInputElement | null>(null);
-  const idRef = useRef(1);
+  const galleryRef = useRef<HTMLInputElement | null>(null);
+  const cameraRef = useRef<HTMLInputElement | null>(null);
   const broker = useMemo<Broker | null>(() => {
     try { const r = localStorage.getItem(BROKER_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
   }, []);
@@ -1259,21 +1256,18 @@ function ScannerScreen({ session: _session }: { session: Session }) {
       const raw = localStorage.getItem(SCAN_COUNT_KEY);
       if (raw) {
         const { date, count } = JSON.parse(raw) as { date: string; count: number };
-        const today = new Date().toDateString();
-        setUsed(date === today ? count : 0);
+        setUsed(date === new Date().toDateString() ? count : 0);
       }
     } catch {}
   }, []);
 
-  const bumpUsed = () => {
-    setUsed((u) => {
-      const next = u + 1;
-      try { localStorage.setItem(SCAN_COUNT_KEY, JSON.stringify({ date: new Date().toDateString(), count: next })); } catch {}
-      return next;
-    });
-  };
-
   const remaining = Math.max(0, SCAN_LIMIT - used);
+
+  const bumpUsed = () => setUsed((u) => {
+    const next = u + 1;
+    try { localStorage.setItem(SCAN_COUNT_KEY, JSON.stringify({ date: new Date().toDateString(), count: next })); } catch {}
+    return next;
+  });
 
   const onPick = async (f: File) => {
     if (!f.type.startsWith("image/")) { toast.error("Pick an image"); return; }
@@ -1285,25 +1279,16 @@ function ScannerScreen({ session: _session }: { session: Session }) {
       r.onerror = () => rej(new Error("read"));
       r.readAsDataURL(f);
     });
-    const userMsg: ChatMsg = { id: idRef.current++, role: "user", image: dataUrl, note };
-    setMsgs((m) => [...m, userMsg]);
-    setNote("");
     setBusy(true);
+    setAnalysis(null);
     try {
-      const r = await analyze({ data: { image: dataUrl, note } });
-      if (!r.ok) {
-        setMsgs((m) => [...m, { id: idRef.current++, role: "bot", text: `Could not analyze: ${r.reason}` }]);
-        return;
-      }
+      const r = await analyze({ data: { image: dataUrl } });
+      if (!r.ok) { toast.error(r.reason); return; }
       bumpUsed();
-      const a: AnalysisResult = r;
-      setMsgs((m) => [...m, {
-        id: idRef.current++, role: "bot",
-        text: `${a.side} ${a.symbol} • ${a.confidence}% confidence`,
-        analysis: a,
-      }]);
+      setAnalysis(r as AnalysisResult);
+      speak(`${r.side} signal on ${r.symbol}`);
     } catch (e) {
-      setMsgs((m) => [...m, { id: idRef.current++, role: "bot", text: e instanceof Error ? e.message : "Failed" }]);
+      toast.error(e instanceof Error ? e.message : "Failed");
     } finally {
       setBusy(false);
     }
@@ -1314,25 +1299,38 @@ function ScannerScreen({ session: _session }: { session: Session }) {
     setExec({ phase: "sending", plan, placed: 0 });
     speak(`Sending ${plan.trades} ${plan.side} orders on ${plan.symbol}`);
     const tickets: number[] = [];
-    const total = plan.trades;
     let i = 0;
     const tick = () => {
       i++;
       tickets.push(3009585000 + Math.floor(Math.random() * 99999));
-      if (i < total) {
+      if (i < plan.trades) {
         setExec({ phase: "sending", plan, placed: i });
         setTimeout(tick, 350 + Math.random() * 250);
       } else {
+        // Persist executed trades so Home > Trade Logs shows them
+        try {
+          const raw = localStorage.getItem(EXEC_TRADES_KEY);
+          const prev = raw ? (JSON.parse(raw) as Trade[]) : [];
+          const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          const rows: Trade[] = tickets.map((tk, idx) => ({
+            id: tk, symbol: plan.symbol, side: plan.side,
+            lot: plan.lot, price: 0, pnl: 0, at: now,
+            ticket: tk, sl: plan.sl, tp: plan.tp, idx,
+          }) as Trade);
+          const merged = [...rows, ...prev].slice(0, 200);
+          localStorage.setItem(EXEC_TRADES_KEY, JSON.stringify(merged));
+          window.dispatchEvent(new CustomEvent("ea:exec-trades"));
+        } catch {}
         setExec({ phase: "done", plan, tickets });
-        speak(`${total} orders placed. Opening monitor.`);
+        speak(`${plan.trades} orders placed. Opening monitor.`);
       }
     };
     setTimeout(tick, 500);
   };
 
   return (
-    <div className="flex h-full flex-col px-4 pt-4">
-      <div className="flex items-center justify-between gap-2">
+    <div className="flex h-full flex-col items-center px-4 pt-4 text-center">
+      <div className="flex w-full items-center justify-between">
         <div className="flex items-center gap-2">
           <ScanLine className="h-5 w-5" style={{ color: "var(--app-accent)" }} />
           <h1 className="text-xl font-bold">Scanner</h1>
@@ -1342,64 +1340,69 @@ function ScannerScreen({ session: _session }: { session: Session }) {
           {remaining}/{SCAN_LIMIT}
         </span>
       </div>
-      <p className="text-xs text-white/50">Upload a chart, set your orders, execute to your connected MT account</p>
 
-      <div className="mt-3 flex-1 space-y-3 overflow-y-auto pb-4">
-        {msgs.map((m) => m.role === "user" ? (
-          <div key={m.id} className="ml-auto max-w-[80%] rounded-2xl rounded-tr-sm bg-white/10 p-2 text-right">
-            <img src={m.image} alt="chart" className="rounded-lg" />
-            {m.note && <p className="mt-1 text-[11px] text-white/60">{m.note}</p>}
+      {!analysis && !busy && (
+        <div className="mt-6 flex flex-col items-center">
+          <div className="relative grid h-40 w-40 place-items-center rounded-full"
+            style={{ background: "radial-gradient(closest-side, color-mix(in oklab, var(--app-accent) 30%, transparent), transparent 70%)" }}>
+            <div className="grid h-32 w-32 place-items-center overflow-hidden rounded-full ring-2"
+              style={{ borderColor: "var(--app-accent)", boxShadow: "0 0 40px color-mix(in oklab, var(--app-accent) 60%, transparent)" }}>
+              {session.ea_image
+                ? <img src={session.ea_image} alt={session.ea_name} className="h-full w-full object-cover" />
+                : <Bot className="h-12 w-12 text-white/70" />}
+            </div>
           </div>
-        ) : (
-          <div key={m.id} className="mr-auto max-w-[92%] rounded-2xl rounded-tl-sm bg-black/40 p-3 ring-1 ring-white/10">
-            <p className="text-sm font-medium">{m.text}</p>
-            {m.analysis && m.analysis.side !== "NEUTRAL" && (
-              <>
-                <div className="mt-2 grid grid-cols-3 gap-2 text-center text-[10px]">
-                  <div className="rounded bg-white/5 p-1.5"><div className="text-white/40">Entry</div><div className="font-bold">{m.analysis.entry || "—"}</div></div>
-                  <div className="rounded bg-white/5 p-1.5"><div className="text-white/40">SL</div><div className="font-bold">{m.analysis.sl || "—"}</div></div>
-                  <div className="rounded bg-white/5 p-1.5"><div className="text-white/40">TP</div><div className="font-bold">{m.analysis.tp || "—"}</div></div>
-                </div>
-                {m.analysis.reason && <p className="mt-2 text-[11px] text-white/60">{m.analysis.reason}</p>}
-                <ExecuteForm analysis={m.analysis} onExecute={startExecute} />
-              </>
-            )}
-          </div>
-        ))}
-        {busy && <p className="text-center text-xs text-white/40">Analyzing chart…</p>}
-      </div>
+          <h2 className="mt-4 text-lg font-bold uppercase tracking-wider">{session.ea_name}</h2>
+          <p className="mt-1 text-xs uppercase tracking-widest text-white/50">Ready to Scan</p>
+          <p className="mt-2 max-w-[260px] text-[11px] text-white/40">Upload a chart. AI gives you a decisive BUY or SELL, then execute to your MT account.</p>
+        </div>
+      )}
 
-      <div className="sticky bottom-0 mb-2 flex items-center gap-2 rounded-2xl bg-black/60 p-2 ring-1 ring-white/10">
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) onPick(f); e.target.value = ""; }}
-        />
-        <button
-          onClick={() => fileRef.current?.click()}
-          disabled={busy || remaining <= 0}
-          className="grid h-9 w-9 place-items-center rounded-xl text-black disabled:opacity-50"
-          style={{ backgroundColor: "var(--app-accent)" }}
-        >
-          <Upload className="h-4 w-4" />
-        </button>
-        <input
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder={remaining <= 0 ? "Daily limit reached" : "Optional note (timeframe, pair…)"}
-          maxLength={200}
-          className="flex-1 bg-transparent text-sm outline-none placeholder:text-white/30"
-        />
-        <button
-          onClick={() => fileRef.current?.click()}
-          disabled={busy || remaining <= 0}
-          className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 disabled:opacity-50"
-          title="Send screenshot"
-        >
-          <Send className="h-4 w-4" />
-        </button>
+      {busy && (
+        <div className="mt-10 flex flex-col items-center gap-3">
+          <div className="h-16 w-16 animate-spin rounded-full border-4 border-white/10 border-t-transparent" style={{ borderTopColor: "var(--app-accent)" }} />
+          <p className="text-sm text-white/70">Building signal…</p>
+        </div>
+      )}
+
+      {analysis && !busy && (
+        <div className="mt-4 w-full max-w-sm rounded-2xl bg-black/40 p-4 ring-1 ring-white/10 text-left">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] uppercase tracking-widest text-white/50">Signal</p>
+              <p className="mt-0.5 text-2xl font-black" style={{ color: analysis.side === "BUY" ? "#10b981" : "#ef4444" }}>
+                {analysis.side} {analysis.symbol}
+              </p>
+            </div>
+            <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-bold">{analysis.confidence}%</span>
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[10px]">
+            <div className="rounded bg-white/5 p-1.5"><div className="text-white/40">Entry</div><div className="font-bold">{analysis.entry || "—"}</div></div>
+            <div className="rounded bg-white/5 p-1.5"><div className="text-white/40">SL</div><div className="font-bold">{analysis.sl || "—"}</div></div>
+            <div className="rounded bg-white/5 p-1.5"><div className="text-white/40">TP</div><div className="font-bold">{analysis.tp || "—"}</div></div>
+          </div>
+          {analysis.reason && <p className="mt-2 text-[11px] text-white/60">{analysis.reason}</p>}
+          <ExecuteForm analysis={analysis} onExecute={startExecute} />
+          <button onClick={() => setAnalysis(null)} className="mt-3 w-full rounded-lg bg-white/5 py-2 text-xs text-white/60">New scan</button>
+        </div>
+      )}
+
+      <div className="mt-auto w-full max-w-sm pb-4">
+        <input ref={galleryRef} type="file" accept="image/*" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) onPick(f); e.target.value = ""; }} />
+        <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) onPick(f); e.target.value = ""; }} />
+        <div className="grid grid-cols-2 gap-3">
+          <button onClick={() => galleryRef.current?.click()} disabled={busy || remaining <= 0}
+            className="flex items-center justify-center gap-2 rounded-2xl bg-white/10 py-3 text-sm font-semibold ring-1 ring-white/10 disabled:opacity-40">
+            <ImageIcon className="h-4 w-4" /> Gallery
+          </button>
+          <button onClick={() => cameraRef.current?.click()} disabled={busy || remaining <= 0}
+            className="flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold text-black disabled:opacity-40"
+            style={{ backgroundColor: "var(--app-accent)" }}>
+            <CameraIcon className="h-4 w-4" /> Camera
+          </button>
+        </div>
       </div>
 
       {exec.phase !== "idle" && (
@@ -1408,6 +1411,7 @@ function ScannerScreen({ session: _session }: { session: Session }) {
     </div>
   );
 }
+
 
 function ExecuteForm({ analysis, onExecute }: { analysis: AnalysisResult; onExecute: (p: ExecPlan) => void }) {
   const [symbol, setSymbol] = useState(analysis.symbol && analysis.symbol !== "UNKNOWN" ? analysis.symbol : "XAUUSD");
