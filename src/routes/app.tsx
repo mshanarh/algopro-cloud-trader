@@ -595,7 +595,7 @@ function LiveBadge({ running }: { running: boolean }) {
   );
 }
 
-function ActionBar({ running, toggle, handleDelete, onOpenBubble }: { running: boolean; toggle: () => void; handleDelete: () => void; onOpenBubble: () => void }) {
+function ActionBar({ running, toggle, handleDelete, onOpenBubble: _onOpenBubble }: { running: boolean; toggle: () => void; handleDelete: () => void; onOpenBubble: () => void }) {
   return (
     <div className="relative mt-8 flex w-full max-w-[320px] items-center justify-around rounded-full bg-white py-3 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)]">
       <PillBtn icon={<Trash2 className="h-5 w-5" />} label="DELETE" onClick={handleDelete} />
@@ -607,10 +607,11 @@ function ActionBar({ running, toggle, handleDelete, onOpenBubble }: { running: b
       >
         {running ? <Square className="h-5 w-5 fill-white" /> : <Play className="h-5 w-5 fill-white" />}
       </button>
-      <PillBtn icon={<BarChart3 className="h-5 w-5" />} label="SYMBOLS" onClick={onOpenBubble} />
+      <PillBtn icon={<BarChart3 className="h-5 w-5" />} label="SYMBOLS" onClick={() => window.dispatchEvent(new CustomEvent("ea:goto-symbols"))} />
     </div>
   );
 }
+
 
 // V1 — Classic: full EA image portrait with gradient overlays
 function HomeV1({ session, running, toggle, handleDelete, onOpenBubble }: HomeVProps) {
