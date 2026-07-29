@@ -2142,3 +2142,46 @@ function OtherDeviceScreen({ email, onSignOut }: { email: string; onSignOut: () 
     </div>
   );
 }
+
+const ACCENT_PRESETS = [
+  "#10b981", "#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#ef4444",
+  "#06b6d4", "#84cc16", "#f97316", "#a855f7", "#14b8a6", "#eab308",
+];
+
+function ColorsDrawer({ accent, onAccent, onClose }: { accent: string; onAccent: (c: string) => void; onClose: () => void }) {
+  return (
+    <div className="absolute inset-0 z-50 flex" onClick={onClose}>
+      <div className="flex-1 bg-black/60 backdrop-blur-sm" />
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-64 border-l border-white/10 bg-[#0b0f1a] p-5"
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Palette className="h-4 w-4" style={{ color: "var(--app-accent)" }} />
+            <h3 className="text-sm font-bold uppercase tracking-wider">Theme color</h3>
+          </div>
+          <button onClick={onClose} className="rounded-full bg-white/10 p-1"><X className="h-3 w-3" /></button>
+        </div>
+        <div className="grid grid-cols-4 gap-3">
+          {ACCENT_PRESETS.map((c) => (
+            <button
+              key={c}
+              onClick={() => { onAccent(c); onClose(); }}
+              className={`h-12 w-12 rounded-full ring-2 transition ${accent === c ? "ring-white scale-110" : "ring-white/10"}`}
+              style={{ backgroundColor: c, boxShadow: `0 0 20px ${c}80` }}
+            />
+          ))}
+        </div>
+        <label className="mt-5 block text-[11px] uppercase tracking-wider text-white/50">Custom</label>
+        <input
+          type="color"
+          value={accent}
+          onChange={(e) => onAccent(e.target.value)}
+          className="mt-1 h-10 w-full cursor-pointer rounded-lg border border-white/10 bg-transparent"
+        />
+      </div>
+    </div>
+  );
+}
+
