@@ -7,8 +7,9 @@ import {
   HelpCircle, Wifi, Battery, Signal, Flame,
   TrendingUp, TrendingDown, LogOut, ShieldCheck,
   LineChart, Database, Target, Trash2, BarChart3, Plus, Palette, Film, X,
-  Upload, Send, ScanLine, ArrowLeft, FileText, AlertTriangle,
+  Upload, Send, ScanLine, ArrowLeft, FileText, AlertTriangle, Camera as CameraIcon, Image as ImageIcon, Clock, ChevronDown,
 } from "lucide-react";
+
 import { validateLicense, validateMentor, checkAppAccess, reactivateAppByEmail } from "@/lib/portal.functions";
 import { analyzeChart } from "@/lib/scanner.functions";
 
