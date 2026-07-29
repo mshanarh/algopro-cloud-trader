@@ -1507,17 +1507,17 @@ const PRESET_COLORS = [
 ];
 
 function SettingsScreen({
-  session, onLogout, accent, onAccent, bgVideo, onBgVideo, style, onStyle,
+  session, onLogout, accent, bgVideo, onBgVideo, style, onStyle,
 }: {
   session: Session;
   onLogout: () => void;
   accent: string;
-  onAccent: (c: string) => void;
   bgVideo: string;
   onBgVideo: (url: string) => void;
   style: UIStyle;
   onStyle: (s: Partial<UIStyle>) => void;
 }) {
+
   const videoInputRef = useRef<HTMLInputElement | null>(null);
 
   const pickVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
