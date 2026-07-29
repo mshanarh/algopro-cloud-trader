@@ -7,8 +7,9 @@ import {
   HelpCircle, Wifi, Battery, Signal, Flame,
   TrendingUp, TrendingDown, LogOut, ShieldCheck,
   LineChart, Database, Target, Trash2, BarChart3, Plus, Palette, Film, X,
-  Upload, Send, ScanLine, ArrowLeft, FileText, AlertTriangle,
+  Upload, Send, ScanLine, ArrowLeft, FileText, AlertTriangle, Camera as CameraIcon, Image as ImageIcon, Clock, ChevronDown,
 } from "lucide-react";
+
 import { validateLicense, validateMentor, checkAppAccess, reactivateAppByEmail } from "@/lib/portal.functions";
 import { analyzeChart } from "@/lib/scanner.functions";
 
@@ -57,6 +58,7 @@ const VIDEO_KEY = "algopro.bgvideo";
 const BROKER_KEY = "algopro.broker";
 const PAIRS_KEY = "algopro.pairs";
 const STYLE_KEY = "algopro.style";
+const EXEC_TRADES_KEY = "algopro.execTrades";
 
 type Pair = { symbol: string; lot: number; trades: number };
 type HomeVariant = "v1" | "v2" | "v3" | "v4" | "v5" | "v6";
@@ -66,6 +68,7 @@ const DEFAULT_STYLE: UIStyle = { home: "v4", nav: "v1" };
 const SCAN_LIMIT = 50;
 const SCAN_COUNT_KEY = "algopro.scans";
 const DEVICE_KEY = "ea.device";
+
 
 function speak(text: string) {
   try {
@@ -207,6 +210,8 @@ function AppRouter() {
   const [style, setStyle] = useState<UIStyle>(DEFAULT_STYLE);
   const [pairs, setPairs] = useState<Pair[]>([]);
   const [access, setAccess] = useState<AccessState>("idle");
+  const [colorsOpen, setColorsOpen] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const check = useServerFn(checkAppAccess);
 
   useEffect(() => {
@@ -224,6 +229,17 @@ function AppRouter() {
       const p = localStorage.getItem(PAIRS_KEY);
       if (p) setPairs(JSON.parse(p));
     } catch {}
+  }, []);
+
+  useEffect(() => {
+    const gotoSymbols = () => setTab("symbols");
+    const openColors = () => setColorsOpen(true);
+    window.addEventListener("ea:goto-symbols", gotoSymbols);
+    window.addEventListener("ea:open-colors", openColors);
+    return () => {
+      window.removeEventListener("ea:goto-symbols", gotoSymbols);
+      window.removeEventListener("ea:open-colors", openColors);
+    };
   }, []);
 
   useEffect(() => {
@@ -278,6 +294,13 @@ function AppRouter() {
     else localStorage.removeItem(VIDEO_KEY);
   };
 
+  const onTab = (t: TabId) => {
+    if (t === "home" && videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
+    setTab(t);
+  };
+
   const bgTint = useMemo(
     () => `color-mix(in oklab, ${accent} 14%, #06080f)`,
     [accent],
@@ -297,8 +320,8 @@ function AppRouter() {
       {bgVideo && (
         <video
           key={bgVideo}
+          ref={videoRef}
           src={bgVideo}
-          autoPlay
           muted
           loop
           playsInline
@@ -325,7 +348,6 @@ function AppRouter() {
             session={session}
             onLogout={onLogout}
             accent={accent}
-            onAccent={updateAccent}
             bgVideo={bgVideo}
             onBgVideo={updateVideo}
             style={style}
@@ -334,10 +356,12 @@ function AppRouter() {
         )}
         {gated && session && tab === "help" && <HelpScreen />}
       </div>
-      {gated && session && <BottomNav tab={tab} setTab={setTab} style={style} />}
+      {gated && session && <BottomNav tab={tab} setTab={onTab} style={style} />}
+      {colorsOpen && <ColorsDrawer accent={accent} onAccent={updateAccent} onClose={() => setColorsOpen(false)} />}
     </div>
   );
 }
+
 
 
 function MentorGate({ onSuccess }: { onSuccess: (m: Mentor) => void }) {
@@ -486,6 +510,7 @@ function LicenseGate({ mentor, onSuccess, onSignOut }: { mentor: Mentor; onSucce
 function HomeScreen({ session, onDelete, onLogin, style, pairs }: { session: Session; onDelete: () => void; onLogin: (s: Session) => void; style: UIStyle; pairs: Pair[] }) {
   const [running, setRunning] = useState(false);
   const [bubbleOpen, setBubbleOpen] = useState(false);
+  const swipeRef = useRef<{ x: number; y: number } | null>(null);
 
   const toggle = () => {
     setRunning((r) => {
@@ -508,10 +533,22 @@ function HomeScreen({ session, onDelete, onLogin, style, pairs }: { session: Ses
     toast.success("Licence removed");
   };
 
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0]; swipeRef.current = { x: t.clientX, y: t.clientY };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const s = swipeRef.current; swipeRef.current = null; if (!s) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - s.x; const dy = t.clientY - s.y;
+    if (dx < -60 && Math.abs(dy) < 60) {
+      window.dispatchEvent(new CustomEvent("ea:open-colors"));
+    }
+  };
+
   const common = { session, running, toggle, handleDelete, pairs, onOpenBubble: () => setBubbleOpen(true) };
 
   return (
-    <>
+    <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       {style.home === "v1" && <HomeV1 {...common} />}
       {style.home === "v2" && <HomeV2 {...common} />}
       {style.home === "v3" && <HomeV3 {...common} />}
@@ -523,6 +560,8 @@ function HomeScreen({ session, onDelete, onLogin, style, pairs }: { session: Ses
         <AddLicenceButton onLogin={onLogin} />
       </div>
 
+      <p className="pb-4 text-center text-[10px] text-white/30">← Swipe left to change colors</p>
+
       {bubbleOpen && (
         <TradeBubble
           session={session}
@@ -532,9 +571,10 @@ function HomeScreen({ session, onDelete, onLogin, style, pairs }: { session: Ses
           pairs={pairs}
         />
       )}
-    </>
+    </div>
   );
 }
+
 
 
 type HomeVProps = {
@@ -555,7 +595,7 @@ function LiveBadge({ running }: { running: boolean }) {
   );
 }
 
-function ActionBar({ running, toggle, handleDelete, onOpenBubble }: { running: boolean; toggle: () => void; handleDelete: () => void; onOpenBubble: () => void }) {
+function ActionBar({ running, toggle, handleDelete, onOpenBubble: _onOpenBubble }: { running: boolean; toggle: () => void; handleDelete: () => void; onOpenBubble: () => void }) {
   return (
     <div className="relative mt-8 flex w-full max-w-[320px] items-center justify-around rounded-full bg-white py-3 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)]">
       <PillBtn icon={<Trash2 className="h-5 w-5" />} label="DELETE" onClick={handleDelete} />
@@ -567,10 +607,11 @@ function ActionBar({ running, toggle, handleDelete, onOpenBubble }: { running: b
       >
         {running ? <Square className="h-5 w-5 fill-white" /> : <Play className="h-5 w-5 fill-white" />}
       </button>
-      <PillBtn icon={<BarChart3 className="h-5 w-5" />} label="SYMBOLS" onClick={onOpenBubble} />
+      <PillBtn icon={<BarChart3 className="h-5 w-5" />} label="SYMBOLS" onClick={() => window.dispatchEvent(new CustomEvent("ea:goto-symbols"))} />
     </div>
   );
 }
+
 
 // V1 — Classic: full EA image portrait with gradient overlays
 function HomeV1({ session, running, toggle, handleDelete, onOpenBubble }: HomeVProps) {
@@ -840,38 +881,38 @@ function TradeBubble({
   );
 }
 
-function TradeLogs({ running, symbols }: { running: boolean; symbols: string[] }) {
+function TradeLogs({ running, symbols: _symbols }: { running: boolean; symbols: string[] }) {
   const [logs, setLogs] = useState<Trade[]>([]);
-  const idRef = useRef(1);
   useEffect(() => {
-    if (!running) return;
-    const pool = symbols.length ? symbols : ["EURUSD", "XAUUSD"];
-    const t = setInterval(() => {
-      const sym = pool[Math.floor(Math.random() * pool.length)];
-      const side: "BUY" | "SELL" = Math.random() > 0.5 ? "BUY" : "SELL";
-      setLogs((p) => [{
-        id: idRef.current++, symbol: sym, side,
-        lot: +(Math.random() * 0.5 + 0.01).toFixed(2),
-        price: +(1 + Math.random() * 2000).toFixed(2),
-        pnl: +(Math.random() * 80 - 30).toFixed(2),
-        at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-      }, ...p].slice(0, 15));
-    }, 2200);
-    return () => clearInterval(t);
-  }, [running, symbols]);
+    const load = () => {
+      try {
+        const raw = localStorage.getItem(EXEC_TRADES_KEY);
+        setLogs(raw ? (JSON.parse(raw) as Trade[]) : []);
+      } catch { setLogs([]); }
+    };
+    load();
+    const on = () => load();
+    window.addEventListener("ea:exec-trades", on);
+    window.addEventListener("storage", on);
+    const t = setInterval(load, 2500);
+    return () => {
+      window.removeEventListener("ea:exec-trades", on);
+      window.removeEventListener("storage", on);
+      clearInterval(t);
+    };
+  }, []);
 
   return (
     <div className="relative mt-6 w-full max-w-[340px] rounded-2xl border border-white/10 bg-black/40 p-3 text-left">
       <div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-wider text-white/60">
         <FileText className="h-3.5 w-3.5" style={{ color: "var(--app-accent)" }} />
-        Trade logs
+        My Executed Trades
         {running && <span className="ml-auto inline-flex items-center gap-1 text-emerald-300">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> live
         </span>}
       </div>
       <div className="max-h-44 space-y-1.5 overflow-y-auto pr-1">
-        {!running && <p className="py-3 text-center text-[11px] text-white/40">Bot is stopped</p>}
-        {running && logs.length === 0 && <p className="py-3 text-center text-[11px] text-white/40">Waiting for trades…</p>}
+        {logs.length === 0 && <p className="py-3 text-center text-[11px] text-white/40">No trades executed yet. Use Scanner to execute a signal.</p>}
         {logs.map((t) => (
           <div key={t.id} className="flex items-center gap-2 rounded-lg bg-white/[0.04] px-2 py-1.5 text-[11px]">
             {t.side === "BUY"
@@ -880,10 +921,7 @@ function TradeLogs({ running, symbols }: { running: boolean; symbols: string[] }
             <span className="font-semibold">{t.symbol}</span>
             <span className="text-white/50">{t.side} {t.lot}</span>
             <span className="ml-auto font-mono tabular-nums">
-              <span className={t.pnl >= 0 ? "text-emerald-300" : "text-rose-300"}>
-                {t.pnl >= 0 ? "+" : ""}{t.pnl.toFixed(2)}
-              </span>
-              <span className="ml-2 text-white/40">{t.at}</span>
+              <span className="text-white/40">{t.at}</span>
             </span>
           </div>
         ))}
@@ -891,6 +929,7 @@ function TradeLogs({ running, symbols }: { running: boolean; symbols: string[] }
     </div>
   );
 }
+
 
 
 function PillBtn({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
@@ -1200,17 +1239,14 @@ type ExecState =
   | { phase: "sending"; plan: ExecPlan; placed: number }
   | { phase: "done"; plan: ExecPlan; tickets: number[] };
 
-function ScannerScreen({ session: _session }: { session: Session }) {
+function ScannerScreen({ session }: { session: Session }) {
   const analyze = useServerFn(analyzeChart);
-  const [msgs, setMsgs] = useState<ChatMsg[]>([
-    { id: 0, role: "bot", text: "Upload a chart screenshot and I'll tell you BUY or SELL." },
-  ]);
-  const [note, setNote] = useState("");
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [used, setUsed] = useState(0);
   const [exec, setExec] = useState<ExecState>({ phase: "idle" });
-  const fileRef = useRef<HTMLInputElement | null>(null);
-  const idRef = useRef(1);
+  const galleryRef = useRef<HTMLInputElement | null>(null);
+  const cameraRef = useRef<HTMLInputElement | null>(null);
   const broker = useMemo<Broker | null>(() => {
     try { const r = localStorage.getItem(BROKER_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
   }, []);
@@ -1220,21 +1256,18 @@ function ScannerScreen({ session: _session }: { session: Session }) {
       const raw = localStorage.getItem(SCAN_COUNT_KEY);
       if (raw) {
         const { date, count } = JSON.parse(raw) as { date: string; count: number };
-        const today = new Date().toDateString();
-        setUsed(date === today ? count : 0);
+        setUsed(date === new Date().toDateString() ? count : 0);
       }
     } catch {}
   }, []);
 
-  const bumpUsed = () => {
-    setUsed((u) => {
-      const next = u + 1;
-      try { localStorage.setItem(SCAN_COUNT_KEY, JSON.stringify({ date: new Date().toDateString(), count: next })); } catch {}
-      return next;
-    });
-  };
-
   const remaining = Math.max(0, SCAN_LIMIT - used);
+
+  const bumpUsed = () => setUsed((u) => {
+    const next = u + 1;
+    try { localStorage.setItem(SCAN_COUNT_KEY, JSON.stringify({ date: new Date().toDateString(), count: next })); } catch {}
+    return next;
+  });
 
   const onPick = async (f: File) => {
     if (!f.type.startsWith("image/")) { toast.error("Pick an image"); return; }
@@ -1246,25 +1279,16 @@ function ScannerScreen({ session: _session }: { session: Session }) {
       r.onerror = () => rej(new Error("read"));
       r.readAsDataURL(f);
     });
-    const userMsg: ChatMsg = { id: idRef.current++, role: "user", image: dataUrl, note };
-    setMsgs((m) => [...m, userMsg]);
-    setNote("");
     setBusy(true);
+    setAnalysis(null);
     try {
-      const r = await analyze({ data: { image: dataUrl, note } });
-      if (!r.ok) {
-        setMsgs((m) => [...m, { id: idRef.current++, role: "bot", text: `Could not analyze: ${r.reason}` }]);
-        return;
-      }
+      const r = await analyze({ data: { image: dataUrl } });
+      if (!r.ok) { toast.error(r.reason); return; }
       bumpUsed();
-      const a: AnalysisResult = r;
-      setMsgs((m) => [...m, {
-        id: idRef.current++, role: "bot",
-        text: `${a.side} ${a.symbol} • ${a.confidence}% confidence`,
-        analysis: a,
-      }]);
+      setAnalysis(r as AnalysisResult);
+      speak(`${r.side} signal on ${r.symbol}`);
     } catch (e) {
-      setMsgs((m) => [...m, { id: idRef.current++, role: "bot", text: e instanceof Error ? e.message : "Failed" }]);
+      toast.error(e instanceof Error ? e.message : "Failed");
     } finally {
       setBusy(false);
     }
@@ -1275,25 +1299,38 @@ function ScannerScreen({ session: _session }: { session: Session }) {
     setExec({ phase: "sending", plan, placed: 0 });
     speak(`Sending ${plan.trades} ${plan.side} orders on ${plan.symbol}`);
     const tickets: number[] = [];
-    const total = plan.trades;
     let i = 0;
     const tick = () => {
       i++;
       tickets.push(3009585000 + Math.floor(Math.random() * 99999));
-      if (i < total) {
+      if (i < plan.trades) {
         setExec({ phase: "sending", plan, placed: i });
         setTimeout(tick, 350 + Math.random() * 250);
       } else {
+        // Persist executed trades so Home > Trade Logs shows them
+        try {
+          const raw = localStorage.getItem(EXEC_TRADES_KEY);
+          const prev = raw ? (JSON.parse(raw) as Trade[]) : [];
+          const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          const rows: Trade[] = tickets.map((tk, idx) => ({
+            id: tk, symbol: plan.symbol, side: plan.side,
+            lot: plan.lot, price: 0, pnl: 0, at: now,
+            ticket: tk, sl: plan.sl, tp: plan.tp, idx,
+          }) as Trade);
+          const merged = [...rows, ...prev].slice(0, 200);
+          localStorage.setItem(EXEC_TRADES_KEY, JSON.stringify(merged));
+          window.dispatchEvent(new CustomEvent("ea:exec-trades"));
+        } catch {}
         setExec({ phase: "done", plan, tickets });
-        speak(`${total} orders placed. Opening monitor.`);
+        speak(`${plan.trades} orders placed. Opening monitor.`);
       }
     };
     setTimeout(tick, 500);
   };
 
   return (
-    <div className="flex h-full flex-col px-4 pt-4">
-      <div className="flex items-center justify-between gap-2">
+    <div className="flex h-full flex-col items-center px-4 pt-4 text-center">
+      <div className="flex w-full items-center justify-between">
         <div className="flex items-center gap-2">
           <ScanLine className="h-5 w-5" style={{ color: "var(--app-accent)" }} />
           <h1 className="text-xl font-bold">Scanner</h1>
@@ -1303,64 +1340,69 @@ function ScannerScreen({ session: _session }: { session: Session }) {
           {remaining}/{SCAN_LIMIT}
         </span>
       </div>
-      <p className="text-xs text-white/50">Upload a chart, set your orders, execute to your connected MT account</p>
 
-      <div className="mt-3 flex-1 space-y-3 overflow-y-auto pb-4">
-        {msgs.map((m) => m.role === "user" ? (
-          <div key={m.id} className="ml-auto max-w-[80%] rounded-2xl rounded-tr-sm bg-white/10 p-2 text-right">
-            <img src={m.image} alt="chart" className="rounded-lg" />
-            {m.note && <p className="mt-1 text-[11px] text-white/60">{m.note}</p>}
+      {!analysis && !busy && (
+        <div className="mt-6 flex flex-col items-center">
+          <div className="relative grid h-40 w-40 place-items-center rounded-full"
+            style={{ background: "radial-gradient(closest-side, color-mix(in oklab, var(--app-accent) 30%, transparent), transparent 70%)" }}>
+            <div className="grid h-32 w-32 place-items-center overflow-hidden rounded-full ring-2"
+              style={{ borderColor: "var(--app-accent)", boxShadow: "0 0 40px color-mix(in oklab, var(--app-accent) 60%, transparent)" }}>
+              {session.ea_image
+                ? <img src={session.ea_image} alt={session.ea_name} className="h-full w-full object-cover" />
+                : <Bot className="h-12 w-12 text-white/70" />}
+            </div>
           </div>
-        ) : (
-          <div key={m.id} className="mr-auto max-w-[92%] rounded-2xl rounded-tl-sm bg-black/40 p-3 ring-1 ring-white/10">
-            <p className="text-sm font-medium">{m.text}</p>
-            {m.analysis && m.analysis.side !== "NEUTRAL" && (
-              <>
-                <div className="mt-2 grid grid-cols-3 gap-2 text-center text-[10px]">
-                  <div className="rounded bg-white/5 p-1.5"><div className="text-white/40">Entry</div><div className="font-bold">{m.analysis.entry || "—"}</div></div>
-                  <div className="rounded bg-white/5 p-1.5"><div className="text-white/40">SL</div><div className="font-bold">{m.analysis.sl || "—"}</div></div>
-                  <div className="rounded bg-white/5 p-1.5"><div className="text-white/40">TP</div><div className="font-bold">{m.analysis.tp || "—"}</div></div>
-                </div>
-                {m.analysis.reason && <p className="mt-2 text-[11px] text-white/60">{m.analysis.reason}</p>}
-                <ExecuteForm analysis={m.analysis} onExecute={startExecute} />
-              </>
-            )}
-          </div>
-        ))}
-        {busy && <p className="text-center text-xs text-white/40">Analyzing chart…</p>}
-      </div>
+          <h2 className="mt-4 text-lg font-bold uppercase tracking-wider">{session.ea_name}</h2>
+          <p className="mt-1 text-xs uppercase tracking-widest text-white/50">Ready to Scan</p>
+          <p className="mt-2 max-w-[260px] text-[11px] text-white/40">Upload a chart. AI gives you a decisive BUY or SELL, then execute to your MT account.</p>
+        </div>
+      )}
 
-      <div className="sticky bottom-0 mb-2 flex items-center gap-2 rounded-2xl bg-black/60 p-2 ring-1 ring-white/10">
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) onPick(f); e.target.value = ""; }}
-        />
-        <button
-          onClick={() => fileRef.current?.click()}
-          disabled={busy || remaining <= 0}
-          className="grid h-9 w-9 place-items-center rounded-xl text-black disabled:opacity-50"
-          style={{ backgroundColor: "var(--app-accent)" }}
-        >
-          <Upload className="h-4 w-4" />
-        </button>
-        <input
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder={remaining <= 0 ? "Daily limit reached" : "Optional note (timeframe, pair…)"}
-          maxLength={200}
-          className="flex-1 bg-transparent text-sm outline-none placeholder:text-white/30"
-        />
-        <button
-          onClick={() => fileRef.current?.click()}
-          disabled={busy || remaining <= 0}
-          className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 disabled:opacity-50"
-          title="Send screenshot"
-        >
-          <Send className="h-4 w-4" />
-        </button>
+      {busy && (
+        <div className="mt-10 flex flex-col items-center gap-3">
+          <div className="h-16 w-16 animate-spin rounded-full border-4 border-white/10 border-t-transparent" style={{ borderTopColor: "var(--app-accent)" }} />
+          <p className="text-sm text-white/70">Building signal…</p>
+        </div>
+      )}
+
+      {analysis && !busy && (
+        <div className="mt-4 w-full max-w-sm rounded-2xl bg-black/40 p-4 ring-1 ring-white/10 text-left">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] uppercase tracking-widest text-white/50">Signal</p>
+              <p className="mt-0.5 text-2xl font-black" style={{ color: analysis.side === "BUY" ? "#10b981" : "#ef4444" }}>
+                {analysis.side} {analysis.symbol}
+              </p>
+            </div>
+            <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-bold">{analysis.confidence}%</span>
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[10px]">
+            <div className="rounded bg-white/5 p-1.5"><div className="text-white/40">Entry</div><div className="font-bold">{analysis.entry || "—"}</div></div>
+            <div className="rounded bg-white/5 p-1.5"><div className="text-white/40">SL</div><div className="font-bold">{analysis.sl || "—"}</div></div>
+            <div className="rounded bg-white/5 p-1.5"><div className="text-white/40">TP</div><div className="font-bold">{analysis.tp || "—"}</div></div>
+          </div>
+          {analysis.reason && <p className="mt-2 text-[11px] text-white/60">{analysis.reason}</p>}
+          <ExecuteForm analysis={analysis} onExecute={startExecute} />
+          <button onClick={() => setAnalysis(null)} className="mt-3 w-full rounded-lg bg-white/5 py-2 text-xs text-white/60">New scan</button>
+        </div>
+      )}
+
+      <div className="mt-auto w-full max-w-sm pb-4">
+        <input ref={galleryRef} type="file" accept="image/*" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) onPick(f); e.target.value = ""; }} />
+        <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) onPick(f); e.target.value = ""; }} />
+        <div className="grid grid-cols-2 gap-3">
+          <button onClick={() => galleryRef.current?.click()} disabled={busy || remaining <= 0}
+            className="flex items-center justify-center gap-2 rounded-2xl bg-white/10 py-3 text-sm font-semibold ring-1 ring-white/10 disabled:opacity-40">
+            <ImageIcon className="h-4 w-4" /> Gallery
+          </button>
+          <button onClick={() => cameraRef.current?.click()} disabled={busy || remaining <= 0}
+            className="flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold text-black disabled:opacity-40"
+            style={{ backgroundColor: "var(--app-accent)" }}>
+            <CameraIcon className="h-4 w-4" /> Camera
+          </button>
+        </div>
       </div>
 
       {exec.phase !== "idle" && (
@@ -1369,6 +1411,7 @@ function ScannerScreen({ session: _session }: { session: Session }) {
     </div>
   );
 }
+
 
 function ExecuteForm({ analysis, onExecute }: { analysis: AnalysisResult; onExecute: (p: ExecPlan) => void }) {
   const [symbol, setSymbol] = useState(analysis.symbol && analysis.symbol !== "UNKNOWN" ? analysis.symbol : "XAUUSD");
@@ -1484,17 +1527,17 @@ const PRESET_COLORS = [
 ];
 
 function SettingsScreen({
-  session, onLogout, accent, onAccent, bgVideo, onBgVideo, style, onStyle,
+  session, onLogout, accent, bgVideo, onBgVideo, style, onStyle,
 }: {
   session: Session;
   onLogout: () => void;
   accent: string;
-  onAccent: (c: string) => void;
   bgVideo: string;
   onBgVideo: (url: string) => void;
   style: UIStyle;
   onStyle: (s: Partial<UIStyle>) => void;
 }) {
+
   const videoInputRef = useRef<HTMLInputElement | null>(null);
 
   const pickVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1578,34 +1621,15 @@ function SettingsScreen({
       </div>
 
 
-
-      {/* Theme color */}
+      {/* App color — swipe left on Home to change */}
       <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-        <div className="mb-3 flex items-center gap-2">
+        <div className="mb-1 flex items-center gap-2">
           <Palette className="h-4 w-4" style={{ color: accent }} />
           <span className="text-sm font-semibold">App Color</span>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {PRESET_COLORS.map((c) => (
-            <button
-              key={c}
-              onClick={() => onAccent(c)}
-              className={`h-8 w-8 rounded-full ring-2 transition ${accent === c ? "ring-white scale-110" : "ring-white/10"}`}
-              style={{ backgroundColor: c }}
-              aria-label={`Set color ${c}`}
-            />
-          ))}
-          <label className="ml-1 flex h-8 cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 text-xs">
-            Custom
-            <input
-              type="color"
-              value={accent}
-              onChange={(e) => onAccent(e.target.value)}
-              className="h-5 w-5 cursor-pointer rounded border-0 bg-transparent p-0"
-            />
-          </label>
-        </div>
+        <p className="text-[11px] text-white/50">Swipe left on the Home screen to pick a color.</p>
       </div>
+
 
       {/* Background video */}
       <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
@@ -2118,3 +2142,46 @@ function OtherDeviceScreen({ email, onSignOut }: { email: string; onSignOut: () 
     </div>
   );
 }
+
+const ACCENT_PRESETS = [
+  "#10b981", "#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#ef4444",
+  "#06b6d4", "#84cc16", "#f97316", "#a855f7", "#14b8a6", "#eab308",
+];
+
+function ColorsDrawer({ accent, onAccent, onClose }: { accent: string; onAccent: (c: string) => void; onClose: () => void }) {
+  return (
+    <div className="absolute inset-0 z-50 flex" onClick={onClose}>
+      <div className="flex-1 bg-black/60 backdrop-blur-sm" />
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-64 border-l border-white/10 bg-[#0b0f1a] p-5"
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Palette className="h-4 w-4" style={{ color: "var(--app-accent)" }} />
+            <h3 className="text-sm font-bold uppercase tracking-wider">Theme color</h3>
+          </div>
+          <button onClick={onClose} className="rounded-full bg-white/10 p-1"><X className="h-3 w-3" /></button>
+        </div>
+        <div className="grid grid-cols-4 gap-3">
+          {ACCENT_PRESETS.map((c) => (
+            <button
+              key={c}
+              onClick={() => { onAccent(c); onClose(); }}
+              className={`h-12 w-12 rounded-full ring-2 transition ${accent === c ? "ring-white scale-110" : "ring-white/10"}`}
+              style={{ backgroundColor: c, boxShadow: `0 0 20px ${c}80` }}
+            />
+          ))}
+        </div>
+        <label className="mt-5 block text-[11px] uppercase tracking-wider text-white/50">Custom</label>
+        <input
+          type="color"
+          value={accent}
+          onChange={(e) => onAccent(e.target.value)}
+          className="mt-1 h-10 w-full cursor-pointer rounded-lg border border-white/10 bg-transparent"
+        />
+      </div>
+    </div>
+  );
+}
+
