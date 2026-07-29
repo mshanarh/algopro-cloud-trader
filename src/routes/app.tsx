@@ -509,6 +509,7 @@ function LicenseGate({ mentor, onSuccess, onSignOut }: { mentor: Mentor; onSucce
 function HomeScreen({ session, onDelete, onLogin, style, pairs }: { session: Session; onDelete: () => void; onLogin: (s: Session) => void; style: UIStyle; pairs: Pair[] }) {
   const [running, setRunning] = useState(false);
   const [bubbleOpen, setBubbleOpen] = useState(false);
+  const swipeRef = useRef<{ x: number; y: number } | null>(null);
 
   const toggle = () => {
     setRunning((r) => {
@@ -531,10 +532,22 @@ function HomeScreen({ session, onDelete, onLogin, style, pairs }: { session: Ses
     toast.success("Licence removed");
   };
 
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0]; swipeRef.current = { x: t.clientX, y: t.clientY };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const s = swipeRef.current; swipeRef.current = null; if (!s) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - s.x; const dy = t.clientY - s.y;
+    if (dx < -60 && Math.abs(dy) < 60) {
+      window.dispatchEvent(new CustomEvent("ea:open-colors"));
+    }
+  };
+
   const common = { session, running, toggle, handleDelete, pairs, onOpenBubble: () => setBubbleOpen(true) };
 
   return (
-    <>
+    <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       {style.home === "v1" && <HomeV1 {...common} />}
       {style.home === "v2" && <HomeV2 {...common} />}
       {style.home === "v3" && <HomeV3 {...common} />}
@@ -546,6 +559,8 @@ function HomeScreen({ session, onDelete, onLogin, style, pairs }: { session: Ses
         <AddLicenceButton onLogin={onLogin} />
       </div>
 
+      <p className="pb-4 text-center text-[10px] text-white/30">← Swipe left to change colors</p>
+
       {bubbleOpen && (
         <TradeBubble
           session={session}
@@ -555,9 +570,10 @@ function HomeScreen({ session, onDelete, onLogin, style, pairs }: { session: Ses
           pairs={pairs}
         />
       )}
-    </>
+    </div>
   );
 }
+
 
 
 type HomeVProps = {
