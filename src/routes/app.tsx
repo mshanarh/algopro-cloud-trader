@@ -1601,34 +1601,15 @@ function SettingsScreen({
       </div>
 
 
-
-      {/* Theme color */}
+      {/* App color — swipe left on Home to change */}
       <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-        <div className="mb-3 flex items-center gap-2">
+        <div className="mb-1 flex items-center gap-2">
           <Palette className="h-4 w-4" style={{ color: accent }} />
           <span className="text-sm font-semibold">App Color</span>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {PRESET_COLORS.map((c) => (
-            <button
-              key={c}
-              onClick={() => onAccent(c)}
-              className={`h-8 w-8 rounded-full ring-2 transition ${accent === c ? "ring-white scale-110" : "ring-white/10"}`}
-              style={{ backgroundColor: c }}
-              aria-label={`Set color ${c}`}
-            />
-          ))}
-          <label className="ml-1 flex h-8 cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 text-xs">
-            Custom
-            <input
-              type="color"
-              value={accent}
-              onChange={(e) => onAccent(e.target.value)}
-              className="h-5 w-5 cursor-pointer rounded border-0 bg-transparent p-0"
-            />
-          </label>
-        </div>
+        <p className="text-[11px] text-white/50">Swipe left on the Home screen to pick a color.</p>
       </div>
+
 
       {/* Background video */}
       <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
