@@ -14,8 +14,11 @@ export const analyzeChart = createServerFn({ method: "POST" })
       return { ok: false as const, reason: "AI not configured" };
     }
     const prompt =
-      "You are a trading chart analyst. Look at this chart screenshot and respond ONLY in strict JSON: " +
-      `{"symbol":"<pair or UNKNOWN>","side":"BUY"|"SELL"|"NEUTRAL","confidence":0-100,"entry":"<approx price or n/a>","sl":"<approx>","tp":"<approx>","reason":"<one short sentence>"}.` +
+      "You are a decisive trading chart analyst. Look at this chart screenshot and ALWAYS commit to a direction. " +
+      "You are NEVER allowed to answer NEUTRAL, WAIT, HOLD, or UNKNOWN — you must pick BUY or SELL. " +
+      "If the chart is unclear, still pick the marginally stronger side. " +
+      "Respond ONLY in strict JSON: " +
+      `{"symbol":"<pair>","side":"BUY"|"SELL","confidence":50-100,"entry":"<approx price>","sl":"<approx>","tp":"<approx>","reason":"<one short sentence>"}.` +
       (data.note ? ` User note: ${data.note}` : "");
     try {
       const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -42,10 +45,13 @@ export const analyzeChart = createServerFn({ method: "POST" })
       const m = raw.match(/\{[\s\S]*\}/);
       if (!m) return { ok: false as const, reason: "No analysis returned" };
       const parsed = JSON.parse(m[0]) as {
-        symbol: string; side: "BUY" | "SELL" | "NEUTRAL"; confidence: number;
+        symbol: string; side: "BUY" | "SELL" | string; confidence: number;
         entry?: string; sl?: string; tp?: string; reason?: string;
       };
-      return { ok: true as const, ...parsed };
+      // Force BUY/SELL — never let a NEUTRAL slip through.
+      let side: "BUY" | "SELL" = parsed.side === "SELL" ? "SELL" : parsed.side === "BUY" ? "BUY" : "BUY";
+      return { ok: true as const, ...parsed, side };
+
     } catch (e) {
       return { ok: false as const, reason: e instanceof Error ? e.message : "Failed" };
     }
