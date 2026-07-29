@@ -209,6 +209,8 @@ function AppRouter() {
   const [style, setStyle] = useState<UIStyle>(DEFAULT_STYLE);
   const [pairs, setPairs] = useState<Pair[]>([]);
   const [access, setAccess] = useState<AccessState>("idle");
+  const [colorsOpen, setColorsOpen] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const check = useServerFn(checkAppAccess);
 
   useEffect(() => {
@@ -226,6 +228,17 @@ function AppRouter() {
       const p = localStorage.getItem(PAIRS_KEY);
       if (p) setPairs(JSON.parse(p));
     } catch {}
+  }, []);
+
+  useEffect(() => {
+    const gotoSymbols = () => setTab("symbols");
+    const openColors = () => setColorsOpen(true);
+    window.addEventListener("ea:goto-symbols", gotoSymbols);
+    window.addEventListener("ea:open-colors", openColors);
+    return () => {
+      window.removeEventListener("ea:goto-symbols", gotoSymbols);
+      window.removeEventListener("ea:open-colors", openColors);
+    };
   }, []);
 
   useEffect(() => {
@@ -280,6 +293,13 @@ function AppRouter() {
     else localStorage.removeItem(VIDEO_KEY);
   };
 
+  const onTab = (t: TabId) => {
+    if (t === "home" && videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
+    setTab(t);
+  };
+
   const bgTint = useMemo(
     () => `color-mix(in oklab, ${accent} 14%, #06080f)`,
     [accent],
@@ -299,8 +319,8 @@ function AppRouter() {
       {bgVideo && (
         <video
           key={bgVideo}
+          ref={videoRef}
           src={bgVideo}
-          autoPlay
           muted
           loop
           playsInline
@@ -327,7 +347,6 @@ function AppRouter() {
             session={session}
             onLogout={onLogout}
             accent={accent}
-            onAccent={updateAccent}
             bgVideo={bgVideo}
             onBgVideo={updateVideo}
             style={style}
@@ -336,10 +355,12 @@ function AppRouter() {
         )}
         {gated && session && tab === "help" && <HelpScreen />}
       </div>
-      {gated && session && <BottomNav tab={tab} setTab={setTab} style={style} />}
+      {gated && session && <BottomNav tab={tab} setTab={onTab} style={style} />}
+      {colorsOpen && <ColorsDrawer accent={accent} onAccent={updateAccent} onClose={() => setColorsOpen(false)} />}
     </div>
   );
 }
+
 
 
 function MentorGate({ onSuccess }: { onSuccess: (m: Mentor) => void }) {
