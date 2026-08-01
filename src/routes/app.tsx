@@ -1298,6 +1298,8 @@ type ExecState =
 
 function ScannerScreen({ session }: { session: Session }) {
   const analyze = useServerFn(analyzeChart);
+  const live = useServerFn(executeLiveTrades);
+
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [used, setUsed] = useState(0);
