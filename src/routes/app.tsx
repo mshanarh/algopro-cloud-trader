@@ -51,7 +51,7 @@ type Broker = {
   server: string;
   login: string;
   password: string;
-  metaapi_id?: string;
+
 };
 
 const STORAGE_KEY = "algopro.session";
@@ -1241,14 +1241,12 @@ function MetaTraderScreen() {
             className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
           />
         </Field>
-        <Field label="MetaApi Account ID (for live execution)">
-          <input
-            value={broker.metaapi_id ?? ""}
-            onChange={(e) => setBroker({ ...broker, metaapi_id: e.target.value.trim() })}
-            placeholder="e.g. 0a1b2c3d-4e5f-..."
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
-          />
-        </Field>
+        <p className="rounded-xl bg-white/5 px-3 py-2 text-[11px] leading-relaxed text-white/50">
+          Live execution is handled by EA Force — no extra API keys needed. Just save your broker
+          login and the bot trades straight into your MT4/MT5 account.
+        </p>
+
+
 
         <button
           type="submit"
@@ -1358,34 +1356,36 @@ function ScannerScreen({ session }: { session: Session }) {
     setExec({ phase: "sending", plan, placed: 0 });
     speak(`Sending ${plan.trades} ${plan.side} orders on ${plan.symbol}`);
 
-    let tickets: number[] = [];
+    const r = await live({
+      data: {
+        broker: broker.broker,
+        server: broker.server,
+        login: broker.login,
+        password: broker.password,
+        platform: "mt5" as const,
+        symbol: plan.symbol,
+        side: plan.side,
+        lot: plan.lot,
+        trades: plan.trades,
+        ...(Number(plan.sl) ? { sl: Number(plan.sl) } : {}),
+        ...(Number(plan.tp) ? { tp: Number(plan.tp) } : {}),
+      },
+    }).catch((e: unknown) => ({
+      ok: false as const,
+      reason: e instanceof Error ? e.message : "Failed",
+      placed: [] as { ticket: number | string; error?: string }[],
+      filled: 0,
+      total: plan.trades,
+    }));
 
-    if (broker.metaapi_id) {
-      const r = await live({
-        data: {
-          account_id: broker.metaapi_id,
-          symbol: plan.symbol,
-          side: plan.side,
-          lot: plan.lot,
-          trades: plan.trades,
-          ...(Number(plan.sl) ? { sl: Number(plan.sl) } : {}),
-          ...(Number(plan.tp) ? { tp: Number(plan.tp) } : {}),
-        },
-      }).catch((e: unknown) => ({ ok: false as const, reason: e instanceof Error ? e.message : "Failed", placed: [], filled: 0, total: plan.trades }));
-
-      if (!r.ok) {
-        setExec({ phase: "idle" });
-        toast.error(r.reason || "Live execution failed");
-        speak("Order rejected by MetaTrader.");
-        return;
-      }
-      tickets = (r.placed ?? []).filter((p) => !p.error).map((p) => Number(p.ticket) || 0);
-    } else {
-      // No MetaApi account linked — run in demo mode so the flow can be tested.
-      tickets = Array.from({ length: plan.trades }, () => 3009585000 + Math.floor(Math.random() * 99999));
-      await new Promise((res) => setTimeout(res, 600 + plan.trades * 250));
-      toast.info("Demo mode — add your MetaApi Account ID for live orders");
+    if (!r.ok) {
+      setExec({ phase: "idle" });
+      toast.error(r.reason || "Live execution failed");
+      speak("Order rejected by MetaTrader.");
+      return;
     }
+    const tickets: number[] = (r.placed ?? []).filter((p) => !p.error).map((p) => Number(p.ticket) || 0);
+
 
     try {
       const raw = localStorage.getItem(EXEC_TRADES_KEY);
