@@ -224,7 +224,29 @@ export const validateLicense = createServerFn({ method: "POST" })
     };
   });
 
+export const getLicenseInfo = createServerFn({ method: "POST" })
+  .inputValidator((input) => z.object({ key: z.string().trim().min(4).max(50) }).parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row } = await supabaseAdmin
+      .from("licenses")
+      .select("status, expires_at, expert_advisors(name, symbols, image_url)")
+      .eq("key", data.key.toUpperCase())
+      .maybeSingle();
+    if (!row) return { ok: false as const };
+    const ea = (row as any).expert_advisors;
+    return {
+      ok: true as const,
+      status: row.status as string,
+      expires_at: row.expires_at,
+      ea_name: ea?.name ?? "EA Force Bot",
+      symbols: (ea?.symbols ?? []) as string[],
+      ea_image: (ea?.image_url ?? null) as string | null,
+    };
+  });
+
 export const reactivateLicense = createServerFn({ method: "POST" })
+
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({
     id: z.string().uuid(),

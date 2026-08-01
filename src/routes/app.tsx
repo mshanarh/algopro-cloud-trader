@@ -10,8 +10,10 @@ import {
   Upload, Send, ScanLine, ArrowLeft, FileText, AlertTriangle, Camera as CameraIcon, Image as ImageIcon, Clock, ChevronDown,
 } from "lucide-react";
 
-import { validateLicense, validateMentor, checkAppAccess, reactivateAppByEmail } from "@/lib/portal.functions";
+import { validateLicense, validateMentor, checkAppAccess, reactivateAppByEmail, getLicenseInfo } from "@/lib/portal.functions";
 import { analyzeChart } from "@/lib/scanner.functions";
+import { executeLiveTrades } from "@/lib/trade.functions";
+
 
 export const Route = createFileRoute("/app")({
   component: PhoneApp,
@@ -49,6 +51,7 @@ type Broker = {
   server: string;
   login: string;
   password: string;
+  metaapi_id?: string;
 };
 
 const STORAGE_KEY = "algopro.session";
@@ -59,6 +62,7 @@ const BROKER_KEY = "algopro.broker";
 const PAIRS_KEY = "algopro.pairs";
 const STYLE_KEY = "algopro.style";
 const EXEC_TRADES_KEY = "algopro.execTrades";
+const DELETED_KEYS_KEY = "algopro.deletedKeys";
 
 type Pair = { symbol: string; lot: number; trades: number };
 type HomeVariant = "v1" | "v2" | "v3" | "v4" | "v5" | "v6";
@@ -68,6 +72,20 @@ const DEFAULT_STYLE: UIStyle = { home: "v4", nav: "v1" };
 const SCAN_LIMIT = 50;
 const SCAN_COUNT_KEY = "algopro.scans";
 const DEVICE_KEY = "ea.device";
+
+function getDeletedKeys(): string[] {
+  try { return JSON.parse(localStorage.getItem(DELETED_KEYS_KEY) || "[]") as string[]; } catch { return []; }
+}
+function addDeletedKey(k: string) {
+  try {
+    const next = Array.from(new Set([...getDeletedKeys(), k.toUpperCase()]));
+    localStorage.setItem(DELETED_KEYS_KEY, JSON.stringify(next));
+  } catch {}
+}
+function isDeletedKey(k: string) {
+  return getDeletedKeys().includes(k.trim().toUpperCase());
+}
+
 
 
 function speak(text: string) {
@@ -260,6 +278,25 @@ function AppRouter() {
       .catch(() => setAccess("ok"));
   }, [mentor, check]);
 
+  // Keep the bot's symbols in sync with what the owner set in the portal
+  const licInfo = useServerFn(getLicenseInfo);
+  const sessionKey = session?.key;
+  useEffect(() => {
+    if (!sessionKey) return;
+    licInfo({ data: { key: sessionKey } })
+      .then((r) => {
+        if (!r.ok) return;
+        setSession((prev) => {
+          if (!prev) return prev;
+          const next = { ...prev, symbols: r.symbols ?? [], ea_name: r.ea_name, ea_image: r.ea_image };
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
+          return next;
+        });
+      })
+      .catch(() => {});
+  }, [sessionKey, licInfo]);
+
+
   const updateStyle = (s: Partial<UIStyle>) => {
     setStyle((prev) => {
       const next = { ...prev, ...s };
@@ -278,6 +315,7 @@ function AppRouter() {
   const onMentor = (m: Mentor) => { setMentor(m); localStorage.setItem(MENTOR_KEY, JSON.stringify(m)); };
   const onLogin = (s: Session) => { setSession(s); localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); };
   const onLogout = () => {
+    if (session?.key) addDeletedKey(session.key);
     setSession(null);
     localStorage.removeItem(STORAGE_KEY);
     setTab("home");
@@ -296,10 +334,18 @@ function AppRouter() {
 
   const onTab = (t: TabId) => {
     if (t === "home" && videoRef.current) {
-      videoRef.current.play().catch(() => {});
+      const v = videoRef.current;
+      if (tab === "home") {
+        // Tapping Home while already home toggles the background video
+        if (v.paused) { v.play().catch(() => {}); toast.info("Background video playing"); }
+        else { v.pause(); toast.info("Background video stopped"); }
+      } else {
+        v.play().catch(() => {});
+      }
     }
     setTab(t);
   };
+
 
   const bgTint = useMemo(
     () => `color-mix(in oklab, ${accent} 14%, #06080f)`,
@@ -421,6 +467,8 @@ function LicenseGate({ mentor, onSuccess, onSignOut }: { mentor: Mentor; onSucce
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!key.trim()) return;
+    if (isDeletedKey(key)) { toast.error("This licence was deleted on this device and can't be used again."); return; }
+
     setLoading(true);
     try {
       const res = await validate({ data: { key } });
@@ -1193,6 +1241,15 @@ function MetaTraderScreen() {
             className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
           />
         </Field>
+        <Field label="MetaApi Account ID (for live execution)">
+          <input
+            value={broker.metaapi_id ?? ""}
+            onChange={(e) => setBroker({ ...broker, metaapi_id: e.target.value.trim() })}
+            placeholder="e.g. 0a1b2c3d-4e5f-..."
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
+          />
+        </Field>
+
         <button
           type="submit"
           className="w-full rounded-xl py-3 text-sm font-semibold text-black"
@@ -1241,6 +1298,8 @@ type ExecState =
 
 function ScannerScreen({ session }: { session: Session }) {
   const analyze = useServerFn(analyzeChart);
+  const live = useServerFn(executeLiveTrades);
+
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [used, setUsed] = useState(0);
@@ -1294,39 +1353,57 @@ function ScannerScreen({ session }: { session: Session }) {
     }
   };
 
-  const startExecute = (plan: ExecPlan) => {
+  const startExecute = async (plan: ExecPlan) => {
     if (!broker) { toast.error("Link your MetaTrader account in the Metatrader tab first"); return; }
     setExec({ phase: "sending", plan, placed: 0 });
     speak(`Sending ${plan.trades} ${plan.side} orders on ${plan.symbol}`);
-    const tickets: number[] = [];
-    let i = 0;
-    const tick = () => {
-      i++;
-      tickets.push(3009585000 + Math.floor(Math.random() * 99999));
-      if (i < plan.trades) {
-        setExec({ phase: "sending", plan, placed: i });
-        setTimeout(tick, 350 + Math.random() * 250);
-      } else {
-        // Persist executed trades so Home > Trade Logs shows them
-        try {
-          const raw = localStorage.getItem(EXEC_TRADES_KEY);
-          const prev = raw ? (JSON.parse(raw) as Trade[]) : [];
-          const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-          const rows: Trade[] = tickets.map((tk, idx) => ({
-            id: tk, symbol: plan.symbol, side: plan.side,
-            lot: plan.lot, price: 0, pnl: 0, at: now,
-            ticket: tk, sl: plan.sl, tp: plan.tp, idx,
-          }) as Trade);
-          const merged = [...rows, ...prev].slice(0, 200);
-          localStorage.setItem(EXEC_TRADES_KEY, JSON.stringify(merged));
-          window.dispatchEvent(new CustomEvent("ea:exec-trades"));
-        } catch {}
-        setExec({ phase: "done", plan, tickets });
-        speak(`${plan.trades} orders placed. Opening monitor.`);
+
+    let tickets: number[] = [];
+
+    if (broker.metaapi_id) {
+      const r = await live({
+        data: {
+          account_id: broker.metaapi_id,
+          symbol: plan.symbol,
+          side: plan.side,
+          lot: plan.lot,
+          trades: plan.trades,
+          ...(Number(plan.sl) ? { sl: Number(plan.sl) } : {}),
+          ...(Number(plan.tp) ? { tp: Number(plan.tp) } : {}),
+        },
+      }).catch((e: unknown) => ({ ok: false as const, reason: e instanceof Error ? e.message : "Failed", placed: [], filled: 0, total: plan.trades }));
+
+      if (!r.ok) {
+        setExec({ phase: "idle" });
+        toast.error(r.reason || "Live execution failed");
+        speak("Order rejected by MetaTrader.");
+        return;
       }
-    };
-    setTimeout(tick, 500);
+      tickets = (r.placed ?? []).filter((p) => !p.error).map((p) => Number(p.ticket) || 0);
+    } else {
+      // No MetaApi account linked — run in demo mode so the flow can be tested.
+      tickets = Array.from({ length: plan.trades }, () => 3009585000 + Math.floor(Math.random() * 99999));
+      await new Promise((res) => setTimeout(res, 600 + plan.trades * 250));
+      toast.info("Demo mode — add your MetaApi Account ID for live orders");
+    }
+
+    try {
+      const raw = localStorage.getItem(EXEC_TRADES_KEY);
+      const prev = raw ? (JSON.parse(raw) as Trade[]) : [];
+      const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const rows: Trade[] = tickets.map((tk, idx) => ({
+        id: tk, symbol: plan.symbol, side: plan.side,
+        lot: plan.lot, price: 0, pnl: 0, at: now,
+        ticket: tk, sl: plan.sl, tp: plan.tp, idx,
+      }) as Trade);
+      const merged = [...rows, ...prev].slice(0, 200);
+      localStorage.setItem(EXEC_TRADES_KEY, JSON.stringify(merged));
+      window.dispatchEvent(new CustomEvent("ea:exec-trades"));
+    } catch {}
+    setExec({ phase: "done", plan, tickets });
+    speak(`${tickets.length} orders placed. Opening monitor.`);
   };
+
 
   return (
     <div className="flex h-full flex-col items-center px-4 pt-4 text-center">
@@ -2014,6 +2091,8 @@ function AddLicenceButton({ onLogin }: { onLogin: (s: Session) => void }) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!key.trim()) return;
+    if (isDeletedKey(key)) { toast.error("This licence was deleted on this device and can't be used again."); return; }
+
     setLoading(true);
     try {
       const r = await validate({ data: { key } });
