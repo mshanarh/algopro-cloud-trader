@@ -2062,6 +2062,8 @@ function AddLicenceButton({ onLogin }: { onLogin: (s: Session) => void }) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!key.trim()) return;
+    if (isDeletedKey(key)) { toast.error("This licence was deleted on this device and can't be used again."); return; }
+
     setLoading(true);
     try {
       const r = await validate({ data: { key } });
