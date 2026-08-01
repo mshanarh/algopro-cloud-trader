@@ -276,6 +276,25 @@ function AppRouter() {
       .catch(() => setAccess("ok"));
   }, [mentor, check]);
 
+  // Keep the bot's symbols in sync with what the owner set in the portal
+  const licInfo = useServerFn(getLicenseInfo);
+  const sessionKey = session?.key;
+  useEffect(() => {
+    if (!sessionKey) return;
+    licInfo({ data: { key: sessionKey } })
+      .then((r) => {
+        if (!r.ok) return;
+        setSession((prev) => {
+          if (!prev) return prev;
+          const next = { ...prev, symbols: r.symbols ?? [], ea_name: r.ea_name, ea_image: r.ea_image };
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
+          return next;
+        });
+      })
+      .catch(() => {});
+  }, [sessionKey, licInfo]);
+
+
   const updateStyle = (s: Partial<UIStyle>) => {
     setStyle((prev) => {
       const next = { ...prev, ...s };
