@@ -49,6 +49,7 @@ type Broker = {
   server: string;
   login: string;
   password: string;
+  metaapi_id?: string;
 };
 
 const STORAGE_KEY = "algopro.session";
@@ -59,6 +60,7 @@ const BROKER_KEY = "algopro.broker";
 const PAIRS_KEY = "algopro.pairs";
 const STYLE_KEY = "algopro.style";
 const EXEC_TRADES_KEY = "algopro.execTrades";
+const DELETED_KEYS_KEY = "algopro.deletedKeys";
 
 type Pair = { symbol: string; lot: number; trades: number };
 type HomeVariant = "v1" | "v2" | "v3" | "v4" | "v5" | "v6";
@@ -68,6 +70,20 @@ const DEFAULT_STYLE: UIStyle = { home: "v4", nav: "v1" };
 const SCAN_LIMIT = 50;
 const SCAN_COUNT_KEY = "algopro.scans";
 const DEVICE_KEY = "ea.device";
+
+function getDeletedKeys(): string[] {
+  try { return JSON.parse(localStorage.getItem(DELETED_KEYS_KEY) || "[]") as string[]; } catch { return []; }
+}
+function addDeletedKey(k: string) {
+  try {
+    const next = Array.from(new Set([...getDeletedKeys(), k.toUpperCase()]));
+    localStorage.setItem(DELETED_KEYS_KEY, JSON.stringify(next));
+  } catch {}
+}
+function isDeletedKey(k: string) {
+  return getDeletedKeys().includes(k.trim().toUpperCase());
+}
+
 
 
 function speak(text: string) {
