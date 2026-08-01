@@ -51,7 +51,7 @@ type Broker = {
   server: string;
   login: string;
   password: string;
-  metaapi_id?: string;
+
 };
 
 const STORAGE_KEY = "algopro.session";
