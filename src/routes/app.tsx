@@ -294,6 +294,7 @@ function AppRouter() {
   const onMentor = (m: Mentor) => { setMentor(m); localStorage.setItem(MENTOR_KEY, JSON.stringify(m)); };
   const onLogin = (s: Session) => { setSession(s); localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); };
   const onLogout = () => {
+    if (session?.key) addDeletedKey(session.key);
     setSession(null);
     localStorage.removeItem(STORAGE_KEY);
     setTab("home");
@@ -312,10 +313,18 @@ function AppRouter() {
 
   const onTab = (t: TabId) => {
     if (t === "home" && videoRef.current) {
-      videoRef.current.play().catch(() => {});
+      const v = videoRef.current;
+      if (tab === "home") {
+        // Tapping Home while already home toggles the background video
+        if (v.paused) { v.play().catch(() => {}); toast.info("Background video playing"); }
+        else { v.pause(); toast.info("Background video stopped"); }
+      } else {
+        v.play().catch(() => {});
+      }
     }
     setTab(t);
   };
+
 
   const bgTint = useMemo(
     () => `color-mix(in oklab, ${accent} 14%, #06080f)`,
