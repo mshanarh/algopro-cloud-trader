@@ -1241,6 +1241,15 @@ function MetaTraderScreen() {
             className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
           />
         </Field>
+        <Field label="MetaApi Account ID (for live execution)">
+          <input
+            value={broker.metaapi_id ?? ""}
+            onChange={(e) => setBroker({ ...broker, metaapi_id: e.target.value.trim() })}
+            placeholder="e.g. 0a1b2c3d-4e5f-..."
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
+          />
+        </Field>
+
         <button
           type="submit"
           className="w-full rounded-xl py-3 text-sm font-semibold text-black"
