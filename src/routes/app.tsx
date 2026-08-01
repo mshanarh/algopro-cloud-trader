@@ -1351,39 +1351,57 @@ function ScannerScreen({ session }: { session: Session }) {
     }
   };
 
-  const startExecute = (plan: ExecPlan) => {
+  const startExecute = async (plan: ExecPlan) => {
     if (!broker) { toast.error("Link your MetaTrader account in the Metatrader tab first"); return; }
     setExec({ phase: "sending", plan, placed: 0 });
     speak(`Sending ${plan.trades} ${plan.side} orders on ${plan.symbol}`);
-    const tickets: number[] = [];
-    let i = 0;
-    const tick = () => {
-      i++;
-      tickets.push(3009585000 + Math.floor(Math.random() * 99999));
-      if (i < plan.trades) {
-        setExec({ phase: "sending", plan, placed: i });
-        setTimeout(tick, 350 + Math.random() * 250);
-      } else {
-        // Persist executed trades so Home > Trade Logs shows them
-        try {
-          const raw = localStorage.getItem(EXEC_TRADES_KEY);
-          const prev = raw ? (JSON.parse(raw) as Trade[]) : [];
-          const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-          const rows: Trade[] = tickets.map((tk, idx) => ({
-            id: tk, symbol: plan.symbol, side: plan.side,
-            lot: plan.lot, price: 0, pnl: 0, at: now,
-            ticket: tk, sl: plan.sl, tp: plan.tp, idx,
-          }) as Trade);
-          const merged = [...rows, ...prev].slice(0, 200);
-          localStorage.setItem(EXEC_TRADES_KEY, JSON.stringify(merged));
-          window.dispatchEvent(new CustomEvent("ea:exec-trades"));
-        } catch {}
-        setExec({ phase: "done", plan, tickets });
-        speak(`${plan.trades} orders placed. Opening monitor.`);
+
+    let tickets: number[] = [];
+
+    if (broker.metaapi_id) {
+      const r = await live({
+        data: {
+          account_id: broker.metaapi_id,
+          symbol: plan.symbol,
+          side: plan.side,
+          lot: plan.lot,
+          trades: plan.trades,
+          ...(Number(plan.sl) ? { sl: Number(plan.sl) } : {}),
+          ...(Number(plan.tp) ? { tp: Number(plan.tp) } : {}),
+        },
+      }).catch((e: unknown) => ({ ok: false as const, reason: e instanceof Error ? e.message : "Failed", placed: [], filled: 0, total: plan.trades }));
+
+      if (!r.ok) {
+        setExec({ phase: "idle" });
+        toast.error(r.reason || "Live execution failed");
+        speak("Order rejected by MetaTrader.");
+        return;
       }
-    };
-    setTimeout(tick, 500);
+      tickets = (r.placed ?? []).filter((p) => !p.error).map((p) => Number(p.ticket) || 0);
+    } else {
+      // No MetaApi account linked — run in demo mode so the flow can be tested.
+      tickets = Array.from({ length: plan.trades }, () => 3009585000 + Math.floor(Math.random() * 99999));
+      await new Promise((res) => setTimeout(res, 600 + plan.trades * 250));
+      toast.info("Demo mode — add your MetaApi Account ID for live orders");
+    }
+
+    try {
+      const raw = localStorage.getItem(EXEC_TRADES_KEY);
+      const prev = raw ? (JSON.parse(raw) as Trade[]) : [];
+      const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const rows: Trade[] = tickets.map((tk, idx) => ({
+        id: tk, symbol: plan.symbol, side: plan.side,
+        lot: plan.lot, price: 0, pnl: 0, at: now,
+        ticket: tk, sl: plan.sl, tp: plan.tp, idx,
+      }) as Trade);
+      const merged = [...rows, ...prev].slice(0, 200);
+      localStorage.setItem(EXEC_TRADES_KEY, JSON.stringify(merged));
+      window.dispatchEvent(new CustomEvent("ea:exec-trades"));
+    } catch {}
+    setExec({ phase: "done", plan, tickets });
+    speak(`${tickets.length} orders placed. Opening monitor.`);
   };
+
 
   return (
     <div className="flex h-full flex-col items-center px-4 pt-4 text-center">
