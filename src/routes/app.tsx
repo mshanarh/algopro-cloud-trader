@@ -10,8 +10,10 @@ import {
   Upload, Send, ScanLine, ArrowLeft, FileText, AlertTriangle, Camera as CameraIcon, Image as ImageIcon, Clock, ChevronDown,
 } from "lucide-react";
 
-import { validateLicense, validateMentor, checkAppAccess, reactivateAppByEmail } from "@/lib/portal.functions";
+import { validateLicense, validateMentor, checkAppAccess, reactivateAppByEmail, getLicenseInfo } from "@/lib/portal.functions";
 import { analyzeChart } from "@/lib/scanner.functions";
+import { executeLiveTrades } from "@/lib/trade.functions";
+
 
 export const Route = createFileRoute("/app")({
   component: PhoneApp,
