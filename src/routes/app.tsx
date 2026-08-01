@@ -1356,34 +1356,36 @@ function ScannerScreen({ session }: { session: Session }) {
     setExec({ phase: "sending", plan, placed: 0 });
     speak(`Sending ${plan.trades} ${plan.side} orders on ${plan.symbol}`);
 
-    let tickets: number[] = [];
+    const r = await live({
+      data: {
+        broker: broker.broker,
+        server: broker.server,
+        login: broker.login,
+        password: broker.password,
+        platform: "mt5" as const,
+        symbol: plan.symbol,
+        side: plan.side,
+        lot: plan.lot,
+        trades: plan.trades,
+        ...(Number(plan.sl) ? { sl: Number(plan.sl) } : {}),
+        ...(Number(plan.tp) ? { tp: Number(plan.tp) } : {}),
+      },
+    }).catch((e: unknown) => ({
+      ok: false as const,
+      reason: e instanceof Error ? e.message : "Failed",
+      placed: [] as { ticket: number | string; error?: string }[],
+      filled: 0,
+      total: plan.trades,
+    }));
 
-    if (broker.metaapi_id) {
-      const r = await live({
-        data: {
-          account_id: broker.metaapi_id,
-          symbol: plan.symbol,
-          side: plan.side,
-          lot: plan.lot,
-          trades: plan.trades,
-          ...(Number(plan.sl) ? { sl: Number(plan.sl) } : {}),
-          ...(Number(plan.tp) ? { tp: Number(plan.tp) } : {}),
-        },
-      }).catch((e: unknown) => ({ ok: false as const, reason: e instanceof Error ? e.message : "Failed", placed: [], filled: 0, total: plan.trades }));
-
-      if (!r.ok) {
-        setExec({ phase: "idle" });
-        toast.error(r.reason || "Live execution failed");
-        speak("Order rejected by MetaTrader.");
-        return;
-      }
-      tickets = (r.placed ?? []).filter((p) => !p.error).map((p) => Number(p.ticket) || 0);
-    } else {
-      // No MetaApi account linked — run in demo mode so the flow can be tested.
-      tickets = Array.from({ length: plan.trades }, () => 3009585000 + Math.floor(Math.random() * 99999));
-      await new Promise((res) => setTimeout(res, 600 + plan.trades * 250));
-      toast.info("Demo mode — add your MetaApi Account ID for live orders");
+    if (!r.ok) {
+      setExec({ phase: "idle" });
+      toast.error(r.reason || "Live execution failed");
+      speak("Order rejected by MetaTrader.");
+      return;
     }
+    const tickets: number[] = (r.placed ?? []).filter((p) => !p.error).map((p) => Number(p.ticket) || 0);
+
 
     try {
       const raw = localStorage.getItem(EXEC_TRADES_KEY);
