@@ -234,7 +234,18 @@ function InstallBanner() {
 }
 
 function AnimatedBackdrop() {
+  const [on, setOn] = useState(true);
+  useEffect(() => {
+    const read = () => {
+      try { setOn(localStorage.getItem(ANIM_KEY) !== "off"); } catch {}
+    };
+    read();
+    window.addEventListener("ea:anim", read);
+    return () => window.removeEventListener("ea:anim", read);
+  }, []);
+  if (!on) return null;
   return (
+
     <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
       <div
         className="absolute -left-24 -top-24 h-72 w-72 rounded-full blur-3xl opacity-30 animate-[ea-float_14s_ease-in-out_infinite]"
