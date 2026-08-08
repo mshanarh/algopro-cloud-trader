@@ -1447,9 +1447,26 @@ function ScannerScreen({ session }: { session: Session }) {
   const [exec, setExec] = useState<ExecState>({ phase: "idle" });
   const galleryRef = useRef<HTMLInputElement | null>(null);
   const cameraRef = useRef<HTMLInputElement | null>(null);
-  const broker = useMemo<Broker | null>(() => {
-    try { const r = localStorage.getItem(BROKER_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
+  const [broker, setBrokerState] = useState<Broker | null>(null);
+  useEffect(() => {
+    const read = () => {
+      try {
+        const r = localStorage.getItem(BROKER_KEY);
+        const b = r ? (JSON.parse(r) as Broker) : null;
+        setBrokerState(b && b.broker && b.server && b.login && b.password ? b : null);
+      } catch { setBrokerState(null); }
+    };
+    read();
+    window.addEventListener("ea:broker", read);
+    window.addEventListener("storage", read);
+    window.addEventListener("focus", read);
+    return () => {
+      window.removeEventListener("ea:broker", read);
+      window.removeEventListener("storage", read);
+      window.removeEventListener("focus", read);
+    };
   }, []);
+
 
   useEffect(() => {
     try {
