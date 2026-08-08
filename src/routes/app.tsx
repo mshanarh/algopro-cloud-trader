@@ -63,6 +63,56 @@ const PAIRS_KEY = "algopro.pairs";
 const STYLE_KEY = "algopro.style";
 const EXEC_TRADES_KEY = "algopro.execTrades";
 const DELETED_KEYS_KEY = "algopro.deletedKeys";
+const ANIM_KEY = "algopro.anim";
+
+type BrokerBrand = { name: string; domain: string; color: string; server: string };
+const BROKER_BRANDS: BrokerBrand[] = [
+  { name: "Exness", domain: "exness.com", color: "#ffe600", server: "Exness-Real" },
+  { name: "IC Markets", domain: "icmarkets.com", color: "#e11d48", server: "ICMarketsSC-Live" },
+  { name: "XM", domain: "xm.com", color: "#ef4444", server: "XMGlobal-MT5" },
+  { name: "FBS", domain: "fbs.com", color: "#1d4ed8", server: "FBS-Real" },
+  { name: "Deriv", domain: "deriv.com", color: "#ff444f", server: "Deriv-Server" },
+  { name: "HFM", domain: "hfm.com", color: "#f59e0b", server: "HFMarketsGlobal-Live" },
+  { name: "Pepperstone", domain: "pepperstone.com", color: "#0ea5e9", server: "Pepperstone-Live" },
+  { name: "OctaFX", domain: "octafx.com", color: "#22c55e", server: "OctaFX-Real" },
+  { name: "Tickmill", domain: "tickmill.com", color: "#3b82f6", server: "Tickmill-Live" },
+  { name: "AvaTrade", domain: "avatrade.com", color: "#f97316", server: "Ava-Real" },
+  { name: "FXTM", domain: "forextime.com", color: "#06b6d4", server: "FXTM-Live" },
+  { name: "Other broker", domain: "", color: "#94a3b8", server: "" },
+];
+
+function brandFor(name: string): BrokerBrand | undefined {
+  const n = name.trim().toLowerCase();
+  return BROKER_BRANDS.find((b) => b.domain && b.name.toLowerCase() === n);
+}
+
+function BrokerLogo({ name, size = 40 }: { name: string; size?: number }) {
+  const brand = brandFor(name);
+  const [failed, setFailed] = useState(false);
+  const initials = name.trim().slice(0, 2).toUpperCase() || "?";
+  if (brand?.domain && !failed) {
+    return (
+      <img
+        src={`https://logo.clearbit.com/${brand.domain}`}
+        alt={`${name} logo`}
+        width={size}
+        height={size}
+        onError={() => setFailed(true)}
+        className="rounded-xl bg-white/90 object-contain p-1"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+  return (
+    <div
+      className="flex items-center justify-center rounded-xl text-xs font-bold text-black"
+      style={{ width: size, height: size, backgroundColor: brand?.color ?? "#94a3b8" }}
+    >
+      {initials}
+    </div>
+  );
+}
+
 
 type Pair = { symbol: string; lot: number; trades: number };
 type HomeVariant = "v1" | "v2" | "v3" | "v4" | "v5" | "v6";
@@ -184,7 +234,18 @@ function InstallBanner() {
 }
 
 function AnimatedBackdrop() {
+  const [on, setOn] = useState(true);
+  useEffect(() => {
+    const read = () => {
+      try { setOn(localStorage.getItem(ANIM_KEY) !== "off"); } catch {}
+    };
+    read();
+    window.addEventListener("ea:anim", read);
+    return () => window.removeEventListener("ea:anim", read);
+  }, []);
+  if (!on) return null;
   return (
+
     <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
       <div
         className="absolute -left-24 -top-24 h-72 w-72 rounded-full blur-3xl opacity-30 animate-[ea-float_14s_ease-in-out_infinite]"
@@ -1197,6 +1258,7 @@ function Stat({ label, value, valueClass = "" }: { label: string; value: string;
 function MetaTraderScreen() {
   const [broker, setBroker] = useState<Broker>({ broker: "", server: "", login: "", password: "" });
   const [saved, setSaved] = useState(false);
+  const [picking, setPicking] = useState(false);
 
   useEffect(() => {
     try {
@@ -1213,79 +1275,138 @@ function MetaTraderScreen() {
     }
     localStorage.setItem(BROKER_KEY, JSON.stringify(broker));
     setSaved(true);
-    toast.success("Broker details saved");
+    setPicking(false);
+    window.dispatchEvent(new Event("ea:broker"));
+    toast.success(`${broker.broker} account linked`);
+    speak(`${broker.broker} account linked`);
   };
 
   const clear = () => {
     localStorage.removeItem(BROKER_KEY);
     setBroker({ broker: "", server: "", login: "", password: "" });
     setSaved(false);
-    toast.info("Broker details cleared");
+    setPicking(true);
+    window.dispatchEvent(new Event("ea:broker"));
+    toast.info("Broker unlinked");
   };
+
+  const showForm = picking || !saved;
 
   return (
     <div className="px-5 pt-5">
       <h1 className="text-xl font-bold">MetaTrader</h1>
-      <p className="text-xs text-white/50">Enter your broker details for live execution</p>
+      <p className="text-xs text-white/50">Link your broker account for live execution</p>
 
-      <form onSubmit={submit} className="mt-4 space-y-3">
-        <Field label="Broker Name">
-          <input
-            value={broker.broker}
-            onChange={(e) => setBroker({ ...broker, broker: e.target.value })}
-            placeholder="e.g. Exness, IC Markets"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
-          />
-        </Field>
-        <Field label="Server">
-          <input
-            value={broker.server}
-            onChange={(e) => setBroker({ ...broker, server: e.target.value })}
-            placeholder="e.g. Exness-Real5"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
-          />
-        </Field>
-        <Field label="Login (Account Number)">
-          <input
-            value={broker.login}
-            onChange={(e) => setBroker({ ...broker, login: e.target.value })}
-            inputMode="numeric"
-            placeholder="123456789"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
-          />
-        </Field>
-        <Field label="Password">
-          <input
-            type="password"
-            value={broker.password}
-            onChange={(e) => setBroker({ ...broker, password: e.target.value })}
-            placeholder="Investor or Master password"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
-          />
-        </Field>
-        <p className="rounded-xl bg-white/5 px-3 py-2 text-[11px] leading-relaxed text-white/50">
-          Live execution is handled by EA Force — no extra API keys needed. Just save your broker
-          login and the bot trades straight into your MT4/MT5 account.
-        </p>
+      {saved && (
+        <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.05] p-4">
+          <div className="flex items-center gap-3">
+            <BrokerLogo name={broker.broker} size={46} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold">{broker.broker}</p>
+              <p className="truncate text-[11px] text-white/50">{broker.server} · #{broker.login}</p>
+            </div>
+            <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-semibold text-emerald-300">
+              LINKED
+            </span>
+          </div>
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={() => setPicking((p) => !p)}
+              className="flex-1 rounded-xl border border-white/15 bg-white/5 py-2.5 text-xs font-semibold text-white"
+            >
+              {picking ? "Cancel" : "Change broker"}
+            </button>
+            <button
+              onClick={clear}
+              className="flex-1 rounded-xl border border-rose-500/30 bg-rose-500/10 py-2.5 text-xs font-semibold text-rose-300"
+            >
+              Unlink
+            </button>
+          </div>
+        </div>
+      )}
 
+      {showForm && (
+        <>
+          <p className="mt-5 text-[11px] uppercase tracking-wider text-white/40">Select your broker</p>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            {BROKER_BRANDS.map((b) => {
+              const active = broker.broker.trim().toLowerCase() === b.name.toLowerCase();
+              return (
+                <button
+                  key={b.name}
+                  type="button"
+                  onClick={() =>
+                    setBroker((prev) => ({
+                      ...prev,
+                      broker: b.domain ? b.name : "",
+                      server: b.domain ? b.server : prev.server,
+                    }))
+                  }
+                  className={`flex flex-col items-center gap-1.5 rounded-2xl border p-2.5 text-center transition ${
+                    active ? "border-[var(--app-accent)] bg-white/10" : "border-white/10 bg-white/[0.03]"
+                  }`}
+                >
+                  <BrokerLogo name={b.domain ? b.name : "OT"} size={34} />
+                  <span className="w-full truncate text-[10px] font-semibold text-white/80">{b.name}</span>
+                </button>
+              );
+            })}
+          </div>
 
-
-        <button
-          type="submit"
-          className="w-full rounded-xl py-3 text-sm font-semibold text-black"
-          style={{ backgroundColor: "var(--app-accent)" }}
-        >
-          {saved ? "Update Broker" : "Save Broker"}
-        </button>
-        {saved && (
-          <button type="button" onClick={clear} className="w-full rounded-xl border border-rose-500/30 bg-rose-500/10 py-2.5 text-xs font-semibold text-rose-300">
-            Clear broker details
-          </button>
-        )}
-      </form>
+          <form onSubmit={submit} className="mt-4 space-y-3">
+            <Field label="Broker Name">
+              <input
+                value={broker.broker}
+                onChange={(e) => setBroker({ ...broker, broker: e.target.value })}
+                placeholder="e.g. Exness, IC Markets"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
+              />
+            </Field>
+            <Field label="Server">
+              <input
+                value={broker.server}
+                onChange={(e) => setBroker({ ...broker, server: e.target.value })}
+                placeholder="e.g. Exness-Real5"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
+              />
+            </Field>
+            <Field label="Login (Account Number)">
+              <input
+                value={broker.login}
+                onChange={(e) => setBroker({ ...broker, login: e.target.value })}
+                inputMode="numeric"
+                placeholder="123456789"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
+              />
+            </Field>
+            <Field label="Password">
+              <input
+                type="password"
+                value={broker.password}
+                onChange={(e) => setBroker({ ...broker, password: e.target.value })}
+                placeholder="Investor or Master password"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
+              />
+            </Field>
+            <p className="rounded-xl bg-white/5 px-3 py-2 text-[11px] leading-relaxed text-white/50">
+              Live execution is handled by EA Force — no extra API keys needed. Just save your broker
+              login and the bot trades straight into your MT4/MT5 account.
+            </p>
+            <button
+              type="submit"
+              className="w-full rounded-xl py-3 text-sm font-semibold text-black"
+              style={{ backgroundColor: "var(--app-accent)" }}
+            >
+              {saved ? "Update Broker" : "Link Broker Account"}
+            </button>
+          </form>
+        </>
+      )}
     </div>
   );
 }
+
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -1326,9 +1447,26 @@ function ScannerScreen({ session }: { session: Session }) {
   const [exec, setExec] = useState<ExecState>({ phase: "idle" });
   const galleryRef = useRef<HTMLInputElement | null>(null);
   const cameraRef = useRef<HTMLInputElement | null>(null);
-  const broker = useMemo<Broker | null>(() => {
-    try { const r = localStorage.getItem(BROKER_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
+  const [broker, setBrokerState] = useState<Broker | null>(null);
+  useEffect(() => {
+    const read = () => {
+      try {
+        const r = localStorage.getItem(BROKER_KEY);
+        const b = r ? (JSON.parse(r) as Broker) : null;
+        setBrokerState(b && b.broker && b.server && b.login && b.password ? b : null);
+      } catch { setBrokerState(null); }
+    };
+    read();
+    window.addEventListener("ea:broker", read);
+    window.addEventListener("storage", read);
+    window.addEventListener("focus", read);
+    return () => {
+      window.removeEventListener("ea:broker", read);
+      window.removeEventListener("storage", read);
+      window.removeEventListener("focus", read);
+    };
   }, []);
+
 
   useEffect(() => {
     try {
@@ -1738,6 +1876,11 @@ function SettingsScreen({
         <p className="text-[11px] text-white/50">Swipe left on the Home screen to pick a color.</p>
       </div>
 
+      {/* Background animation */}
+      <BackgroundAnimationCard accent={accent} />
+
+
+
 
       {/* Background video */}
       <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
@@ -1789,7 +1932,42 @@ function SettingsScreen({
   );
 }
 
+function BackgroundAnimationCard({ accent }: { accent: string }) {
+  const [on, setOn] = useState(true);
+  useEffect(() => {
+    try { setOn(localStorage.getItem(ANIM_KEY) !== "off"); } catch {}
+  }, []);
+  const toggle = () => {
+    const next = !on;
+    setOn(next);
+    try { localStorage.setItem(ANIM_KEY, next ? "on" : "off"); } catch {}
+    window.dispatchEvent(new Event("ea:anim"));
+  };
+  return (
+    <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold">Background Animation</p>
+          <p className="mt-0.5 text-[11px] text-white/50">Drifting glows, moving grid and light sweep.</p>
+        </div>
+        <button
+          onClick={toggle}
+          aria-label="Toggle background animation"
+          className="relative h-7 w-12 shrink-0 rounded-full transition"
+          style={{ backgroundColor: on ? accent : "rgba(255,255,255,0.15)" }}
+        >
+          <span
+            className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all"
+            style={{ left: on ? 26 : 4 }}
+          />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Row({ icon, label, value }: { icon?: React.ReactNode; label: string; value: string }) {
+
   return (
     <div className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm">
       <span className="flex items-center gap-2 text-white/70">
