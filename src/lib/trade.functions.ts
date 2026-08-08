@@ -39,7 +39,12 @@ async function resolveAccountId(
   d: { server: string; login: string; password: string; platform: "mt4" | "mt5"; broker?: string },
 ): Promise<{ id: string } | { error: string }> {
   const list = await maFetch(`${PROVISIONING}/users/current/accounts`, token);
-  if (!list.ok) return { error: `MetaApi accounts lookup failed (${list.status})` };
+  if (!list.ok) {
+    if (list.status === 401) {
+      return { error: "Live trading token is invalid or expired. Please update the MetaApi token in EA Force settings." };
+    }
+    return { error: `MetaApi accounts lookup failed (${list.status})` };
+  }
   const accounts = (Array.isArray(list.body) ? list.body : []) as MAAccount[];
   const match = accounts.find(
     (a) => String(a.login ?? "") === d.login && (a.server ?? "").toLowerCase() === d.server.toLowerCase(),
