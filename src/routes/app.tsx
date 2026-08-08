@@ -1356,7 +1356,16 @@ function ScannerScreen({ session }: { session: Session }) {
     setExec({ phase: "sending", plan, placed: 0 });
     speak(`Sending ${plan.trades} ${plan.side} orders on ${plan.symbol}`);
 
-    const r = await live({
+    type LiveResult = {
+      ok: boolean;
+      reason?: string | undefined;
+      placed: { ticket: number | string; error?: string }[];
+      filled: number;
+      total: number;
+    };
+    const fail = (reason: string): LiveResult => ({ ok: false, reason, placed: [], filled: 0, total: plan.trades });
+
+    const call = live({
       data: {
         broker: broker.broker,
         server: broker.server,
@@ -1370,13 +1379,13 @@ function ScannerScreen({ session }: { session: Session }) {
         ...(Number(plan.sl) ? { sl: Number(plan.sl) } : {}),
         ...(Number(plan.tp) ? { tp: Number(plan.tp) } : {}),
       },
-    }).catch((e: unknown) => ({
-      ok: false as const,
-      reason: e instanceof Error ? e.message : "Failed",
-      placed: [] as { ticket: number | string; error?: string }[],
-      filled: 0,
-      total: plan.trades,
-    }));
+    }).then((v) => v as LiveResult).catch((e: unknown) => fail(e instanceof Error ? e.message : "Failed"));
+
+    const timeout = new Promise<LiveResult>((res) =>
+      setTimeout(() => res(fail("Execution timed out. Your account may still be connecting — try again shortly.")), 60000),
+    );
+
+    const r = await Promise.race([call, timeout]);
 
     if (!r.ok) {
       setExec({ phase: "idle" });
