@@ -63,6 +63,56 @@ const PAIRS_KEY = "algopro.pairs";
 const STYLE_KEY = "algopro.style";
 const EXEC_TRADES_KEY = "algopro.execTrades";
 const DELETED_KEYS_KEY = "algopro.deletedKeys";
+const ANIM_KEY = "algopro.anim";
+
+type BrokerBrand = { name: string; domain: string; color: string; server: string };
+const BROKER_BRANDS: BrokerBrand[] = [
+  { name: "Exness", domain: "exness.com", color: "#ffe600", server: "Exness-Real" },
+  { name: "IC Markets", domain: "icmarkets.com", color: "#e11d48", server: "ICMarketsSC-Live" },
+  { name: "XM", domain: "xm.com", color: "#ef4444", server: "XMGlobal-MT5" },
+  { name: "FBS", domain: "fbs.com", color: "#1d4ed8", server: "FBS-Real" },
+  { name: "Deriv", domain: "deriv.com", color: "#ff444f", server: "Deriv-Server" },
+  { name: "HFM", domain: "hfm.com", color: "#f59e0b", server: "HFMarketsGlobal-Live" },
+  { name: "Pepperstone", domain: "pepperstone.com", color: "#0ea5e9", server: "Pepperstone-Live" },
+  { name: "OctaFX", domain: "octafx.com", color: "#22c55e", server: "OctaFX-Real" },
+  { name: "Tickmill", domain: "tickmill.com", color: "#3b82f6", server: "Tickmill-Live" },
+  { name: "AvaTrade", domain: "avatrade.com", color: "#f97316", server: "Ava-Real" },
+  { name: "FXTM", domain: "forextime.com", color: "#06b6d4", server: "FXTM-Live" },
+  { name: "Other broker", domain: "", color: "#94a3b8", server: "" },
+];
+
+function brandFor(name: string): BrokerBrand | undefined {
+  const n = name.trim().toLowerCase();
+  return BROKER_BRANDS.find((b) => b.domain && b.name.toLowerCase() === n);
+}
+
+function BrokerLogo({ name, size = 40 }: { name: string; size?: number }) {
+  const brand = brandFor(name);
+  const [failed, setFailed] = useState(false);
+  const initials = name.trim().slice(0, 2).toUpperCase() || "?";
+  if (brand?.domain && !failed) {
+    return (
+      <img
+        src={`https://logo.clearbit.com/${brand.domain}`}
+        alt={`${name} logo`}
+        width={size}
+        height={size}
+        onError={() => setFailed(true)}
+        className="rounded-xl bg-white/90 object-contain p-1"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+  return (
+    <div
+      className="flex items-center justify-center rounded-xl text-xs font-bold text-black"
+      style={{ width: size, height: size, backgroundColor: brand?.color ?? "#94a3b8" }}
+    >
+      {initials}
+    </div>
+  );
+}
+
 
 type Pair = { symbol: string; lot: number; trades: number };
 type HomeVariant = "v1" | "v2" | "v3" | "v4" | "v5" | "v6";
