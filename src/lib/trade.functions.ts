@@ -125,7 +125,16 @@ export const executeLiveTrades = createServerFn({ method: "POST" })
     const accountId = resolved.id;
 
     // Newly provisioned accounts take a moment to connect to the broker.
-    await waitConnected(base, accountId, token, 45000);
+    const connected = await waitConnected(base, accountId, token, 25000);
+    if (!connected) {
+      return {
+        ok: false as const,
+        reason: "Your trading account is still connecting to the broker. Please wait a minute and press execute again.",
+        placed: [] as Placed[],
+        filled: 0,
+        total: data.trades,
+      };
+    }
 
     const url = `${base}/users/current/accounts/${accountId}/trade`;
     const placed: Placed[] = [];
