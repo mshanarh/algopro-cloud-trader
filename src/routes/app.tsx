@@ -1876,6 +1876,11 @@ function SettingsScreen({
         <p className="text-[11px] text-white/50">Swipe left on the Home screen to pick a color.</p>
       </div>
 
+      {/* Background animation */}
+      <BackgroundAnimationCard accent={accent} />
+
+
+
 
       {/* Background video */}
       <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
