@@ -52,7 +52,7 @@ function Nav() {
           <a href="#compare" className="hidden text-sm text-white/70 hover:text-white sm:inline">Compare</a>
           <a href="#faq" className="hidden text-sm text-white/70 hover:text-white sm:inline">FAQ</a>
           <Link
-            to="/login"
+            to="/login" search={{ redirect: "/portal" }}
             className="rounded-md border border-white/15 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/10"
           >
             Login
@@ -85,7 +85,7 @@ function Hero() {
         </p>
         <div className="mt-7 flex flex-wrap justify-center gap-3">
           <Link
-            to="/login"
+            to="/login" search={{ redirect: "/portal" }}
             className="inline-flex items-center gap-2 rounded-lg bg-[image:var(--gradient-purple)] px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-elegant)] hover:opacity-95"
           >
             Get Started <ArrowRight className="h-4 w-4" />
