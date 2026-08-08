@@ -1932,7 +1932,42 @@ function SettingsScreen({
   );
 }
 
+function BackgroundAnimationCard({ accent }: { accent: string }) {
+  const [on, setOn] = useState(true);
+  useEffect(() => {
+    try { setOn(localStorage.getItem(ANIM_KEY) !== "off"); } catch {}
+  }, []);
+  const toggle = () => {
+    const next = !on;
+    setOn(next);
+    try { localStorage.setItem(ANIM_KEY, next ? "on" : "off"); } catch {}
+    window.dispatchEvent(new Event("ea:anim"));
+  };
+  return (
+    <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold">Background Animation</p>
+          <p className="mt-0.5 text-[11px] text-white/50">Drifting glows, moving grid and light sweep.</p>
+        </div>
+        <button
+          onClick={toggle}
+          aria-label="Toggle background animation"
+          className="relative h-7 w-12 shrink-0 rounded-full transition"
+          style={{ backgroundColor: on ? accent : "rgba(255,255,255,0.15)" }}
+        >
+          <span
+            className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all"
+            style={{ left: on ? 26 : 4 }}
+          />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Row({ icon, label, value }: { icon?: React.ReactNode; label: string; value: string }) {
+
   return (
     <div className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm">
       <span className="flex items-center gap-2 text-white/70">
