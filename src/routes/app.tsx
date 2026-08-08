@@ -183,10 +183,32 @@ function InstallBanner() {
   );
 }
 
+function AnimatedBackdrop() {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+      <div
+        className="absolute -left-24 -top-24 h-72 w-72 rounded-full blur-3xl opacity-30 animate-[ea-float_14s_ease-in-out_infinite]"
+        style={{ background: "radial-gradient(circle, var(--app-accent, #22d3ee), transparent 65%)" }}
+      />
+      <div
+        className="absolute -right-24 top-1/3 h-80 w-80 rounded-full blur-3xl opacity-25 animate-[ea-float_18s_ease-in-out_infinite_reverse]"
+        style={{ background: "radial-gradient(circle, var(--app-accent, #22d3ee), transparent 65%)" }}
+      />
+      <div
+        className="absolute -bottom-28 left-1/4 h-72 w-72 rounded-full blur-3xl opacity-20 animate-[ea-float_22s_ease-in-out_infinite]"
+        style={{ background: "radial-gradient(circle, #7c3aed, transparent 65%)" }}
+      />
+      <div className="absolute inset-0 opacity-[0.06] animate-[ea-grid_26s_linear_infinite] [background-image:linear-gradient(rgba(255,255,255,.6)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.6)_1px,transparent_1px)] [background-size:38px_38px]" />
+      <div className="absolute inset-x-0 top-0 h-40 animate-[ea-sweep_9s_ease-in-out_infinite] bg-[linear-gradient(180deg,rgba(255,255,255,.10),transparent)]" />
+    </div>
+  );
+}
+
 function PhoneFrame({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative mx-auto aspect-[9/19.5] w-full overflow-hidden bg-black sm:rounded-[3rem] sm:p-[14px] sm:shadow-[0_30px_80px_-20px_rgba(15,23,42,0.6)] sm:ring-[3px] sm:ring-slate-800">
       <div className="relative h-full w-full overflow-hidden sm:rounded-[2.4rem]" style={{ backgroundColor: "var(--app-bg)" }}>
+        <AnimatedBackdrop />
         <div className="pointer-events-none absolute left-1/2 top-2 z-30 hidden h-7 w-32 -translate-x-1/2 rounded-full bg-black sm:block" />
         {children}
       </div>
@@ -1356,7 +1378,16 @@ function ScannerScreen({ session }: { session: Session }) {
     setExec({ phase: "sending", plan, placed: 0 });
     speak(`Sending ${plan.trades} ${plan.side} orders on ${plan.symbol}`);
 
-    const r = await live({
+    type LiveResult = {
+      ok: boolean;
+      reason?: string | undefined;
+      placed: { ticket: number | string; error?: string }[];
+      filled: number;
+      total: number;
+    };
+    const fail = (reason: string): LiveResult => ({ ok: false, reason, placed: [], filled: 0, total: plan.trades });
+
+    const call = live({
       data: {
         broker: broker.broker,
         server: broker.server,
@@ -1370,13 +1401,13 @@ function ScannerScreen({ session }: { session: Session }) {
         ...(Number(plan.sl) ? { sl: Number(plan.sl) } : {}),
         ...(Number(plan.tp) ? { tp: Number(plan.tp) } : {}),
       },
-    }).catch((e: unknown) => ({
-      ok: false as const,
-      reason: e instanceof Error ? e.message : "Failed",
-      placed: [] as { ticket: number | string; error?: string }[],
-      filled: 0,
-      total: plan.trades,
-    }));
+    }).then((v) => v as LiveResult).catch((e: unknown) => fail(e instanceof Error ? e.message : "Failed"));
+
+    const timeout = new Promise<LiveResult>((res) =>
+      setTimeout(() => res(fail("Execution timed out. Your account may still be connecting — try again shortly.")), 60000),
+    );
+
+    const r = await Promise.race([call, timeout]);
 
     if (!r.ok) {
       setExec({ phase: "idle" });

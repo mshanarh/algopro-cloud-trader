@@ -11,7 +11,7 @@ function PendingPage() {
   const navigate = useNavigate();
   const signOut = async () => {
     await supabase.auth.signOut();
-    navigate({ to: "/login" });
+    navigate({ to: "/login", search: { redirect: "/portal" } });
   };
   return (
     <main className="grid min-h-screen place-items-center bg-[image:var(--gradient-navy)] px-5 py-10">

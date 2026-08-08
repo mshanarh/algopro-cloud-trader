@@ -50,7 +50,7 @@ function PortalLayout() {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    navigate({ to: "/login" });
+    navigate({ to: "/login", search: { redirect: "/portal" } });
   };
 
   if (status && !status.approved) return null;

@@ -20,13 +20,22 @@ type MAAccount = { _id?: string; id?: string; login?: string; server?: string; s
 
 const PROVISIONING = "https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai";
 
-async function maFetch(url: string, token: string, init?: RequestInit) {
-  const res = await fetch(url, {
-    ...init,
-    headers: { "auth-token": token, "Content-Type": "application/json", ...(init?.headers ?? {}) },
-  });
-  const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  return { ok: res.ok, status: res.status, body };
+async function maFetch(url: string, token: string, init?: RequestInit, timeoutMs = 12000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      ...init,
+      signal: ctrl.signal,
+      headers: { "auth-token": token, "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    });
+    const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    return { ok: res.ok, status: res.status, body };
+  } catch {
+    return { ok: false, status: 408, body: {} as Record<string, unknown> };
+  } finally {
+    clearTimeout(t);
+  }
 }
 
 /**
@@ -116,7 +125,16 @@ export const executeLiveTrades = createServerFn({ method: "POST" })
     const accountId = resolved.id;
 
     // Newly provisioned accounts take a moment to connect to the broker.
-    await waitConnected(base, accountId, token, 45000);
+    const connected = await waitConnected(base, accountId, token, 25000);
+    if (!connected) {
+      return {
+        ok: false as const,
+        reason: "Your trading account is still connecting to the broker. Please wait a minute and press execute again.",
+        placed: [] as Placed[],
+        filled: 0,
+        total: data.trades,
+      };
+    }
 
     const url = `${base}/users/current/accounts/${accountId}/trade`;
     const placed: Placed[] = [];
