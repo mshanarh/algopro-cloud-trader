@@ -1258,6 +1258,7 @@ function Stat({ label, value, valueClass = "" }: { label: string; value: string;
 function MetaTraderScreen() {
   const [broker, setBroker] = useState<Broker>({ broker: "", server: "", login: "", password: "" });
   const [saved, setSaved] = useState(false);
+  const [picking, setPicking] = useState(false);
 
   useEffect(() => {
     try {
@@ -1274,79 +1275,138 @@ function MetaTraderScreen() {
     }
     localStorage.setItem(BROKER_KEY, JSON.stringify(broker));
     setSaved(true);
-    toast.success("Broker details saved");
+    setPicking(false);
+    window.dispatchEvent(new Event("ea:broker"));
+    toast.success(`${broker.broker} account linked`);
+    speak(`${broker.broker} account linked`);
   };
 
   const clear = () => {
     localStorage.removeItem(BROKER_KEY);
     setBroker({ broker: "", server: "", login: "", password: "" });
     setSaved(false);
-    toast.info("Broker details cleared");
+    setPicking(true);
+    window.dispatchEvent(new Event("ea:broker"));
+    toast.info("Broker unlinked");
   };
+
+  const showForm = picking || !saved;
 
   return (
     <div className="px-5 pt-5">
       <h1 className="text-xl font-bold">MetaTrader</h1>
-      <p className="text-xs text-white/50">Enter your broker details for live execution</p>
+      <p className="text-xs text-white/50">Link your broker account for live execution</p>
 
-      <form onSubmit={submit} className="mt-4 space-y-3">
-        <Field label="Broker Name">
-          <input
-            value={broker.broker}
-            onChange={(e) => setBroker({ ...broker, broker: e.target.value })}
-            placeholder="e.g. Exness, IC Markets"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
-          />
-        </Field>
-        <Field label="Server">
-          <input
-            value={broker.server}
-            onChange={(e) => setBroker({ ...broker, server: e.target.value })}
-            placeholder="e.g. Exness-Real5"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
-          />
-        </Field>
-        <Field label="Login (Account Number)">
-          <input
-            value={broker.login}
-            onChange={(e) => setBroker({ ...broker, login: e.target.value })}
-            inputMode="numeric"
-            placeholder="123456789"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
-          />
-        </Field>
-        <Field label="Password">
-          <input
-            type="password"
-            value={broker.password}
-            onChange={(e) => setBroker({ ...broker, password: e.target.value })}
-            placeholder="Investor or Master password"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
-          />
-        </Field>
-        <p className="rounded-xl bg-white/5 px-3 py-2 text-[11px] leading-relaxed text-white/50">
-          Live execution is handled by EA Force — no extra API keys needed. Just save your broker
-          login and the bot trades straight into your MT4/MT5 account.
-        </p>
+      {saved && (
+        <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.05] p-4">
+          <div className="flex items-center gap-3">
+            <BrokerLogo name={broker.broker} size={46} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold">{broker.broker}</p>
+              <p className="truncate text-[11px] text-white/50">{broker.server} · #{broker.login}</p>
+            </div>
+            <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-semibold text-emerald-300">
+              LINKED
+            </span>
+          </div>
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={() => setPicking((p) => !p)}
+              className="flex-1 rounded-xl border border-white/15 bg-white/5 py-2.5 text-xs font-semibold text-white"
+            >
+              {picking ? "Cancel" : "Change broker"}
+            </button>
+            <button
+              onClick={clear}
+              className="flex-1 rounded-xl border border-rose-500/30 bg-rose-500/10 py-2.5 text-xs font-semibold text-rose-300"
+            >
+              Unlink
+            </button>
+          </div>
+        </div>
+      )}
 
+      {showForm && (
+        <>
+          <p className="mt-5 text-[11px] uppercase tracking-wider text-white/40">Select your broker</p>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            {BROKER_BRANDS.map((b) => {
+              const active = broker.broker.trim().toLowerCase() === b.name.toLowerCase();
+              return (
+                <button
+                  key={b.name}
+                  type="button"
+                  onClick={() =>
+                    setBroker((prev) => ({
+                      ...prev,
+                      broker: b.domain ? b.name : "",
+                      server: b.domain ? b.server : prev.server,
+                    }))
+                  }
+                  className={`flex flex-col items-center gap-1.5 rounded-2xl border p-2.5 text-center transition ${
+                    active ? "border-[var(--app-accent)] bg-white/10" : "border-white/10 bg-white/[0.03]"
+                  }`}
+                >
+                  <BrokerLogo name={b.domain ? b.name : "OT"} size={34} />
+                  <span className="w-full truncate text-[10px] font-semibold text-white/80">{b.name}</span>
+                </button>
+              );
+            })}
+          </div>
 
-
-        <button
-          type="submit"
-          className="w-full rounded-xl py-3 text-sm font-semibold text-black"
-          style={{ backgroundColor: "var(--app-accent)" }}
-        >
-          {saved ? "Update Broker" : "Save Broker"}
-        </button>
-        {saved && (
-          <button type="button" onClick={clear} className="w-full rounded-xl border border-rose-500/30 bg-rose-500/10 py-2.5 text-xs font-semibold text-rose-300">
-            Clear broker details
-          </button>
-        )}
-      </form>
+          <form onSubmit={submit} className="mt-4 space-y-3">
+            <Field label="Broker Name">
+              <input
+                value={broker.broker}
+                onChange={(e) => setBroker({ ...broker, broker: e.target.value })}
+                placeholder="e.g. Exness, IC Markets"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
+              />
+            </Field>
+            <Field label="Server">
+              <input
+                value={broker.server}
+                onChange={(e) => setBroker({ ...broker, server: e.target.value })}
+                placeholder="e.g. Exness-Real5"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
+              />
+            </Field>
+            <Field label="Login (Account Number)">
+              <input
+                value={broker.login}
+                onChange={(e) => setBroker({ ...broker, login: e.target.value })}
+                inputMode="numeric"
+                placeholder="123456789"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
+              />
+            </Field>
+            <Field label="Password">
+              <input
+                type="password"
+                value={broker.password}
+                onChange={(e) => setBroker({ ...broker, password: e.target.value })}
+                placeholder="Investor or Master password"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
+              />
+            </Field>
+            <p className="rounded-xl bg-white/5 px-3 py-2 text-[11px] leading-relaxed text-white/50">
+              Live execution is handled by EA Force — no extra API keys needed. Just save your broker
+              login and the bot trades straight into your MT4/MT5 account.
+            </p>
+            <button
+              type="submit"
+              className="w-full rounded-xl py-3 text-sm font-semibold text-black"
+              style={{ backgroundColor: "var(--app-accent)" }}
+            >
+              {saved ? "Update Broker" : "Link Broker Account"}
+            </button>
+          </form>
+        </>
+      )}
     </div>
   );
 }
+
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
