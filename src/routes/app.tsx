@@ -12,7 +12,7 @@ import {
 
 import { validateLicense, validateMentor, checkAppAccess, reactivateAppByEmail, getLicenseInfo } from "@/lib/portal.functions";
 import { analyzeChart } from "@/lib/scanner.functions";
-import { executeLiveTrades } from "@/lib/trade.functions";
+import { executeLiveTrades, linkBrokerAccount } from "@/lib/trade.functions";
 
 
 export const Route = createFileRoute("/app")({
