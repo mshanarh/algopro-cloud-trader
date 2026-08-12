@@ -1255,35 +1255,195 @@ function Stat({ label, value, valueClass = "" }: { label: string; value: string;
 }
 
 
+type BrokerInfo = { balance: number; equity: number; currency: string; name: string; leverage?: number };
+const BROKER_INFO_KEY = "algopro.brokerInfo";
+
+const LINK_STEPS = [
+  "Verifying broker credentials",
+  "Connecting to broker server",
+  "Syncing trading account",
+  "Loading account balance",
+];
+
+function LinkingOverlay({
+  step,
+  error,
+  info,
+  brokerName,
+  onClose,
+}: {
+  step: number;
+  error: string | null;
+  info: BrokerInfo | null;
+  brokerName: string;
+  onClose: () => void;
+}) {
+  return (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 px-6 backdrop-blur-sm">
+      <div className="w-full rounded-3xl border border-white/10 bg-[#0b0f16] p-5 text-center">
+        {!error && !info && (
+          <>
+            <div className="relative mx-auto h-24 w-24">
+              <div
+                className="absolute inset-0 animate-spin rounded-full border-2 border-transparent"
+                style={{ borderTopColor: "var(--app-accent)", borderRightColor: "var(--app-accent)", animationDuration: "1s" }}
+              />
+              <div
+                className="absolute inset-3 animate-spin rounded-full border-2 border-transparent"
+                style={{ borderBottomColor: "var(--app-accent)", animationDuration: "1.6s", animationDirection: "reverse" }}
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <BrokerLogo name={brokerName} size={38} />
+              </div>
+            </div>
+            <p className="mt-4 text-sm font-bold">Linking {brokerName || "broker"}…</p>
+            <div className="mt-4 space-y-2 text-left">
+              {LINK_STEPS.map((s, i) => (
+                <div key={s} className="flex items-center gap-2.5">
+                  <span
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                      i < step ? "bg-emerald-500 text-black" : i === step ? "bg-white/15 text-white" : "bg-white/5 text-white/30"
+                    }`}
+                  >
+                    {i < step ? "✓" : i + 1}
+                  </span>
+                  <span className={`text-[12px] ${i <= step ? "text-white/85" : "text-white/35"}`}>{s}</span>
+                  {i === step && (
+                    <span className="ml-auto h-3 w-3 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {info && (
+          <>
+            <div className="mx-auto flex h-16 w-16 animate-[scale-in_0.25s_ease-out] items-center justify-center rounded-full bg-emerald-500/15 text-3xl text-emerald-400">
+              ✓
+            </div>
+            <p className="mt-3 text-sm font-bold text-emerald-300">Broker successfully linked</p>
+            <p className="text-[11px] text-white/50">{info.name || brokerName}</p>
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+              <p className="text-[10px] uppercase tracking-wider text-white/40">Available balance</p>
+              <p className="mt-1 text-3xl font-black tabular-nums text-white">
+                {info.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+                <span className="text-base font-bold text-white/50">{info.currency}</span>
+              </p>
+              <div className="mt-2 flex justify-between text-[11px] text-white/50">
+                <span>Equity: {info.equity.toFixed(2)}</span>
+                {info.leverage ? <span>Leverage 1:{info.leverage}</span> : null}
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="mt-4 w-full rounded-xl py-3 text-sm font-semibold text-black"
+              style={{ backgroundColor: "var(--app-accent)" }}
+            >
+              Continue
+            </button>
+          </>
+        )}
+
+        {error && (
+          <>
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/15 text-3xl text-rose-400">
+              !
+            </div>
+            <p className="mt-3 text-sm font-bold text-rose-300">Linking failed</p>
+            <p className="mt-1 text-[12px] leading-relaxed text-white/60">{error}</p>
+            <button
+              onClick={onClose}
+              className="mt-4 w-full rounded-xl border border-white/15 bg-white/5 py-3 text-sm font-semibold text-white"
+            >
+              Close
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function MetaTraderScreen() {
   const [broker, setBroker] = useState<Broker>({ broker: "", server: "", login: "", password: "" });
   const [saved, setSaved] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [info, setInfo] = useState<BrokerInfo | null>(null);
+  const [linking, setLinking] = useState(false);
+  const [step, setStep] = useState(0);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [linkedInfo, setLinkedInfo] = useState<BrokerInfo | null>(null);
+  const link = useServerFn(linkBrokerAccount);
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(BROKER_KEY);
       if (raw) { setBroker(JSON.parse(raw)); setSaved(true); }
+      const ri = localStorage.getItem(BROKER_INFO_KEY);
+      if (ri) setInfo(JSON.parse(ri));
     } catch {}
   }, []);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!broker.broker.trim() || !broker.server.trim() || !broker.login.trim() || !broker.password.trim()) {
       toast.error("Fill in all broker details");
       return;
     }
-    localStorage.setItem(BROKER_KEY, JSON.stringify(broker));
-    setSaved(true);
-    setPicking(false);
-    window.dispatchEvent(new Event("ea:broker"));
-    toast.success(`${broker.broker} account linked`);
-    speak(`${broker.broker} account linked`);
+    setLinking(true);
+    setLinkError(null);
+    setLinkedInfo(null);
+    setStep(0);
+    const timers = [
+      setTimeout(() => setStep(1), 1500),
+      setTimeout(() => setStep(2), 5000),
+      setTimeout(() => setStep(3), 11000),
+    ];
+    try {
+      const res = (await link({
+        data: {
+          broker: broker.broker.trim(),
+          server: broker.server.trim(),
+          login: broker.login.trim(),
+          password: broker.password,
+          platform: "mt5",
+        },
+      })) as
+        | { ok: true; balance: number; equity: number; currency: string; name: string; leverage?: number }
+        | { ok: false; reason: string };
+      timers.forEach(clearTimeout);
+      if (!res.ok) {
+        setLinkError(res.reason);
+        return;
+      }
+      const nfo: BrokerInfo = {
+        balance: res.balance,
+        equity: res.equity,
+        currency: res.currency,
+        name: res.name,
+        ...(res.leverage ? { leverage: res.leverage } : {}),
+      };
+      setStep(LINK_STEPS.length);
+      setLinkedInfo(nfo);
+      setInfo(nfo);
+      localStorage.setItem(BROKER_KEY, JSON.stringify(broker));
+      localStorage.setItem(BROKER_INFO_KEY, JSON.stringify(nfo));
+      setSaved(true);
+      setPicking(false);
+      window.dispatchEvent(new Event("ea:broker"));
+      speak(`${broker.broker} account linked successfully. Available balance ${Math.round(res.balance)} ${res.currency}`);
+    } catch {
+      timers.forEach(clearTimeout);
+      setLinkError("Could not reach the trading server. Please try again.");
+    }
   };
 
   const clear = () => {
     localStorage.removeItem(BROKER_KEY);
+    localStorage.removeItem(BROKER_INFO_KEY);
     setBroker({ broker: "", server: "", login: "", password: "" });
+    setInfo(null);
     setSaved(false);
     setPicking(true);
     window.dispatchEvent(new Event("ea:broker"));
@@ -1309,6 +1469,16 @@ function MetaTraderScreen() {
               LINKED
             </span>
           </div>
+          {info && (
+            <div className="mt-3 rounded-xl bg-black/30 p-3">
+              <p className="text-[10px] uppercase tracking-wider text-white/40">Available balance</p>
+              <p className="mt-0.5 text-2xl font-black tabular-nums">
+                {info.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+                <span className="text-sm font-bold text-white/50">{info.currency}</span>
+              </p>
+              <p className="mt-0.5 text-[11px] text-white/45">Equity {info.equity.toFixed(2)}</p>
+            </div>
+          )}
           <div className="mt-3 flex gap-2">
             <button
               onClick={() => setPicking((p) => !p)}
@@ -1395,13 +1565,24 @@ function MetaTraderScreen() {
             </p>
             <button
               type="submit"
-              className="w-full rounded-xl py-3 text-sm font-semibold text-black"
+              disabled={linking}
+              className="w-full rounded-xl py-3 text-sm font-semibold text-black disabled:opacity-60"
               style={{ backgroundColor: "var(--app-accent)" }}
             >
-              {saved ? "Update Broker" : "Link Broker Account"}
+              {linking ? "Linking…" : saved ? "Update Broker" : "Link Broker Account"}
             </button>
           </form>
         </>
+      )}
+
+      {linking && (
+        <LinkingOverlay
+          step={step}
+          error={linkError}
+          info={linkedInfo}
+          brokerName={broker.broker}
+          onClose={() => { setLinking(false); setLinkError(null); setLinkedInfo(null); }}
+        />
       )}
     </div>
   );
