@@ -1506,31 +1506,15 @@ function MetaTraderScreen() {
 
       {showForm && (
         <>
-          <p className="mt-5 text-[11px] uppercase tracking-wider text-white/40">Select your broker</p>
-          <div className="mt-2 grid grid-cols-3 gap-2">
-            {BROKER_BRANDS.map((b) => {
-              const active = broker.broker.trim().toLowerCase() === b.name.toLowerCase();
-              return (
-                <button
-                  key={b.name}
-                  type="button"
-                  onClick={() =>
-                    setBroker((prev) => ({
-                      ...prev,
-                      broker: b.domain ? b.name : "",
-                      server: b.domain ? b.server : prev.server,
-                    }))
-                  }
-                  className={`flex flex-col items-center gap-1.5 rounded-2xl border p-2.5 text-center transition ${
-                    active ? "border-[var(--app-accent)] bg-white/10" : "border-white/10 bg-white/[0.03]"
-                  }`}
-                >
-                  <BrokerLogo name={b.domain ? b.name : "OT"} size={34} />
-                  <span className="w-full truncate text-[10px] font-semibold text-white/80">{b.name}</span>
-                </button>
-              );
-            })}
-          </div>
+          {detected && (
+            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.05] p-3">
+              <BrokerLogo name={detected.name} size={38} />
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-wider text-white/40">Broker detected</p>
+                <p className="truncate text-sm font-bold">{detected.name}</p>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={submit} className="mt-4 space-y-3">
             <Field label="Broker Name">
