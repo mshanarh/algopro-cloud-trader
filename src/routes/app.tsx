@@ -65,25 +65,33 @@ const EXEC_TRADES_KEY = "algopro.execTrades";
 const DELETED_KEYS_KEY = "algopro.deletedKeys";
 const ANIM_KEY = "algopro.anim";
 
-type BrokerBrand = { name: string; domain: string; color: string; server: string };
+type BrokerBrand = { name: string; domain: string; color: string; keys: string[] };
 const BROKER_BRANDS: BrokerBrand[] = [
-  { name: "Exness", domain: "exness.com", color: "#ffe600", server: "Exness-Real" },
-  { name: "IC Markets", domain: "icmarkets.com", color: "#e11d48", server: "ICMarketsSC-Live" },
-  { name: "XM", domain: "xm.com", color: "#ef4444", server: "XMGlobal-MT5" },
-  { name: "FBS", domain: "fbs.com", color: "#1d4ed8", server: "FBS-Real" },
-  { name: "Deriv", domain: "deriv.com", color: "#ff444f", server: "Deriv-Server" },
-  { name: "HFM", domain: "hfm.com", color: "#f59e0b", server: "HFMarketsGlobal-Live" },
-  { name: "Pepperstone", domain: "pepperstone.com", color: "#0ea5e9", server: "Pepperstone-Live" },
-  { name: "OctaFX", domain: "octafx.com", color: "#22c55e", server: "OctaFX-Real" },
-  { name: "Tickmill", domain: "tickmill.com", color: "#3b82f6", server: "Tickmill-Live" },
-  { name: "AvaTrade", domain: "avatrade.com", color: "#f97316", server: "Ava-Real" },
-  { name: "FXTM", domain: "forextime.com", color: "#06b6d4", server: "FXTM-Live" },
-  { name: "Other broker", domain: "", color: "#94a3b8", server: "" },
+  { name: "Exness", domain: "exness.com", color: "#ffe600", keys: ["exness"] },
+  { name: "IC Markets", domain: "icmarkets.com", color: "#e11d48", keys: ["icmarkets", "ic markets"] },
+  { name: "XM", domain: "xm.com", color: "#ef4444", keys: ["xmglobal", "xm global", "xmtrading", "xm-"] },
+  { name: "FBS", domain: "fbs.com", color: "#1d4ed8", keys: ["fbs"] },
+  { name: "Deriv", domain: "deriv.com", color: "#ff444f", keys: ["deriv", "binary"] },
+  { name: "HFM", domain: "hfm.com", color: "#f59e0b", keys: ["hfm", "hfmarkets", "hotforex"] },
+  { name: "Pepperstone", domain: "pepperstone.com", color: "#0ea5e9", keys: ["pepperstone"] },
+  { name: "OctaFX", domain: "octafx.com", color: "#22c55e", keys: ["octa"] },
+  { name: "Tickmill", domain: "tickmill.com", color: "#3b82f6", keys: ["tickmill"] },
+  { name: "AvaTrade", domain: "avatrade.com", color: "#f97316", keys: ["avatrade", "ava-", "ava "] },
+  { name: "FXTM", domain: "forextime.com", color: "#06b6d4", keys: ["fxtm", "forextime"] },
+  { name: "XTB", domain: "xtb.com", color: "#dc2626", keys: ["xtb"] },
+  { name: "FxPro", domain: "fxpro.com", color: "#0f766e", keys: ["fxpro"] },
+  { name: "Admirals", domain: "admiralmarkets.com", color: "#16a34a", keys: ["admiral"] },
+  { name: "Vantage", domain: "vantagemarkets.com", color: "#8b5cf6", keys: ["vantage"] },
+  { name: "Alpari", domain: "alpari.com", color: "#ef4444", keys: ["alpari"] },
+  { name: "Weltrade", domain: "weltrade.com", color: "#22d3ee", keys: ["weltrade"] },
+  { name: "JustMarkets", domain: "justmarkets.com", color: "#f43f5e", keys: ["just"] },
 ];
 
-function brandFor(name: string): BrokerBrand | undefined {
-  const n = name.trim().toLowerCase();
-  return BROKER_BRANDS.find((b) => b.domain && b.name.toLowerCase() === n);
+/** Detects the broker brand from anything the user typed (broker name or server). */
+function brandFor(text: string): BrokerBrand | undefined {
+  const n = text.trim().toLowerCase();
+  if (!n) return undefined;
+  return BROKER_BRANDS.find((b) => b.keys.some((k) => n.includes(k)) || n.includes(b.name.toLowerCase()));
 }
 
 function BrokerLogo({ name, size = 40 }: { name: string; size?: number }) {
@@ -1375,6 +1383,8 @@ function MetaTraderScreen() {
   const [linkError, setLinkError] = useState<string | null>(null);
   const [linkedInfo, setLinkedInfo] = useState<BrokerInfo | null>(null);
   const link = useServerFn(linkBrokerAccount);
+  const detected = brandFor(`${broker.broker} ${broker.server}`);
+  const displayName = detected?.name || broker.broker.trim() || broker.server.trim();
 
   useEffect(() => {
     try {
@@ -1387,23 +1397,24 @@ function MetaTraderScreen() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!broker.broker.trim() || !broker.server.trim() || !broker.login.trim() || !broker.password.trim()) {
-      toast.error("Fill in all broker details");
+    if (!broker.server.trim() || !broker.login.trim() || !broker.password.trim()) {
+      toast.error("Enter your server, login and password");
       return;
     }
+    if (!broker.broker.trim() && detected) setBroker((p) => ({ ...p, broker: detected.name }));
     setLinking(true);
     setLinkError(null);
     setLinkedInfo(null);
     setStep(0);
     const timers = [
-      setTimeout(() => setStep(1), 1500),
-      setTimeout(() => setStep(2), 5000),
-      setTimeout(() => setStep(3), 11000),
+      setTimeout(() => setStep(1), 350),
+      setTimeout(() => setStep(2), 900),
+      setTimeout(() => setStep(3), 1600),
     ];
     try {
       const res = (await link({
         data: {
-          broker: broker.broker.trim(),
+          broker: (broker.broker.trim() || displayName),
           server: broker.server.trim(),
           login: broker.login.trim(),
           password: broker.password,
@@ -1427,12 +1438,12 @@ function MetaTraderScreen() {
       setStep(LINK_STEPS.length);
       setLinkedInfo(nfo);
       setInfo(nfo);
-      localStorage.setItem(BROKER_KEY, JSON.stringify(broker));
+      localStorage.setItem(BROKER_KEY, JSON.stringify({ ...broker, broker: broker.broker.trim() || displayName }));
       localStorage.setItem(BROKER_INFO_KEY, JSON.stringify(nfo));
       setSaved(true);
       setPicking(false);
       window.dispatchEvent(new Event("ea:broker"));
-      speak(`${broker.broker} account linked successfully. Available balance ${Math.round(res.balance)} ${res.currency}`);
+      speak(`${displayName} account linked successfully. Available balance ${Math.round(res.balance)} ${res.currency}`);
     } catch {
       timers.forEach(clearTimeout);
       setLinkError("Could not reach the trading server. Please try again.");
@@ -1460,9 +1471,9 @@ function MetaTraderScreen() {
       {saved && (
         <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.05] p-4">
           <div className="flex items-center gap-3">
-            <BrokerLogo name={broker.broker} size={46} />
+            <BrokerLogo name={`${broker.broker} ${broker.server}`} size={46} />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold">{broker.broker}</p>
+              <p className="truncate text-sm font-bold">{displayName}</p>
               <p className="truncate text-[11px] text-white/50">{broker.server} · #{broker.login}</p>
             </div>
             <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-semibold text-emerald-300">
@@ -1498,34 +1509,18 @@ function MetaTraderScreen() {
 
       {showForm && (
         <>
-          <p className="mt-5 text-[11px] uppercase tracking-wider text-white/40">Select your broker</p>
-          <div className="mt-2 grid grid-cols-3 gap-2">
-            {BROKER_BRANDS.map((b) => {
-              const active = broker.broker.trim().toLowerCase() === b.name.toLowerCase();
-              return (
-                <button
-                  key={b.name}
-                  type="button"
-                  onClick={() =>
-                    setBroker((prev) => ({
-                      ...prev,
-                      broker: b.domain ? b.name : "",
-                      server: b.domain ? b.server : prev.server,
-                    }))
-                  }
-                  className={`flex flex-col items-center gap-1.5 rounded-2xl border p-2.5 text-center transition ${
-                    active ? "border-[var(--app-accent)] bg-white/10" : "border-white/10 bg-white/[0.03]"
-                  }`}
-                >
-                  <BrokerLogo name={b.domain ? b.name : "OT"} size={34} />
-                  <span className="w-full truncate text-[10px] font-semibold text-white/80">{b.name}</span>
-                </button>
-              );
-            })}
-          </div>
+          {detected && (
+            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.05] p-3">
+              <BrokerLogo name={detected.name} size={38} />
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-wider text-white/40">Broker detected</p>
+                <p className="truncate text-sm font-bold">{detected.name}</p>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={submit} className="mt-4 space-y-3">
-            <Field label="Broker Name">
+            <Field label="Broker Name (auto-detected)">
               <input
                 value={broker.broker}
                 onChange={(e) => setBroker({ ...broker, broker: e.target.value })}
@@ -1580,7 +1575,7 @@ function MetaTraderScreen() {
           step={step}
           error={linkError}
           info={linkedInfo}
-          brokerName={broker.broker}
+          brokerName={displayName}
           onClose={() => { setLinking(false); setLinkError(null); setLinkedInfo(null); }}
         />
       )}
