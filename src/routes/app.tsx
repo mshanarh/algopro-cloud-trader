@@ -65,25 +65,33 @@ const EXEC_TRADES_KEY = "algopro.execTrades";
 const DELETED_KEYS_KEY = "algopro.deletedKeys";
 const ANIM_KEY = "algopro.anim";
 
-type BrokerBrand = { name: string; domain: string; color: string; server: string };
+type BrokerBrand = { name: string; domain: string; color: string; keys: string[] };
 const BROKER_BRANDS: BrokerBrand[] = [
-  { name: "Exness", domain: "exness.com", color: "#ffe600", server: "Exness-Real" },
-  { name: "IC Markets", domain: "icmarkets.com", color: "#e11d48", server: "ICMarketsSC-Live" },
-  { name: "XM", domain: "xm.com", color: "#ef4444", server: "XMGlobal-MT5" },
-  { name: "FBS", domain: "fbs.com", color: "#1d4ed8", server: "FBS-Real" },
-  { name: "Deriv", domain: "deriv.com", color: "#ff444f", server: "Deriv-Server" },
-  { name: "HFM", domain: "hfm.com", color: "#f59e0b", server: "HFMarketsGlobal-Live" },
-  { name: "Pepperstone", domain: "pepperstone.com", color: "#0ea5e9", server: "Pepperstone-Live" },
-  { name: "OctaFX", domain: "octafx.com", color: "#22c55e", server: "OctaFX-Real" },
-  { name: "Tickmill", domain: "tickmill.com", color: "#3b82f6", server: "Tickmill-Live" },
-  { name: "AvaTrade", domain: "avatrade.com", color: "#f97316", server: "Ava-Real" },
-  { name: "FXTM", domain: "forextime.com", color: "#06b6d4", server: "FXTM-Live" },
-  { name: "Other broker", domain: "", color: "#94a3b8", server: "" },
+  { name: "Exness", domain: "exness.com", color: "#ffe600", keys: ["exness"] },
+  { name: "IC Markets", domain: "icmarkets.com", color: "#e11d48", keys: ["icmarkets", "ic markets"] },
+  { name: "XM", domain: "xm.com", color: "#ef4444", keys: ["xmglobal", "xm global", "xmtrading", "xm-"] },
+  { name: "FBS", domain: "fbs.com", color: "#1d4ed8", keys: ["fbs"] },
+  { name: "Deriv", domain: "deriv.com", color: "#ff444f", keys: ["deriv", "binary"] },
+  { name: "HFM", domain: "hfm.com", color: "#f59e0b", keys: ["hfm", "hfmarkets", "hotforex"] },
+  { name: "Pepperstone", domain: "pepperstone.com", color: "#0ea5e9", keys: ["pepperstone"] },
+  { name: "OctaFX", domain: "octafx.com", color: "#22c55e", keys: ["octa"] },
+  { name: "Tickmill", domain: "tickmill.com", color: "#3b82f6", keys: ["tickmill"] },
+  { name: "AvaTrade", domain: "avatrade.com", color: "#f97316", keys: ["avatrade", "ava-", "ava "] },
+  { name: "FXTM", domain: "forextime.com", color: "#06b6d4", keys: ["fxtm", "forextime"] },
+  { name: "XTB", domain: "xtb.com", color: "#dc2626", keys: ["xtb"] },
+  { name: "FxPro", domain: "fxpro.com", color: "#0f766e", keys: ["fxpro"] },
+  { name: "Admirals", domain: "admiralmarkets.com", color: "#16a34a", keys: ["admiral"] },
+  { name: "Vantage", domain: "vantagemarkets.com", color: "#8b5cf6", keys: ["vantage"] },
+  { name: "Alpari", domain: "alpari.com", color: "#ef4444", keys: ["alpari"] },
+  { name: "Weltrade", domain: "weltrade.com", color: "#22d3ee", keys: ["weltrade"] },
+  { name: "JustMarkets", domain: "justmarkets.com", color: "#f43f5e", keys: ["just"] },
 ];
 
-function brandFor(name: string): BrokerBrand | undefined {
-  const n = name.trim().toLowerCase();
-  return BROKER_BRANDS.find((b) => b.domain && b.name.toLowerCase() === n);
+/** Detects the broker brand from anything the user typed (broker name or server). */
+function brandFor(text: string): BrokerBrand | undefined {
+  const n = text.trim().toLowerCase();
+  if (!n) return undefined;
+  return BROKER_BRANDS.find((b) => b.keys.some((k) => n.includes(k)) || n.includes(b.name.toLowerCase()));
 }
 
 function BrokerLogo({ name, size = 40 }: { name: string; size?: number }) {
