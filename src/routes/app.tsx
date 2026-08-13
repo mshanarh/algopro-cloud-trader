@@ -1397,10 +1397,11 @@ function MetaTraderScreen() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!broker.broker.trim() || !broker.server.trim() || !broker.login.trim() || !broker.password.trim()) {
-      toast.error("Fill in all broker details");
+    if (!broker.server.trim() || !broker.login.trim() || !broker.password.trim()) {
+      toast.error("Enter your server, login and password");
       return;
     }
+    if (!broker.broker.trim() && detected) setBroker((p) => ({ ...p, broker: detected.name }));
     setLinking(true);
     setLinkError(null);
     setLinkedInfo(null);
