@@ -1407,14 +1407,14 @@ function MetaTraderScreen() {
     setLinkedInfo(null);
     setStep(0);
     const timers = [
-      setTimeout(() => setStep(1), 1500),
-      setTimeout(() => setStep(2), 5000),
-      setTimeout(() => setStep(3), 11000),
+      setTimeout(() => setStep(1), 350),
+      setTimeout(() => setStep(2), 900),
+      setTimeout(() => setStep(3), 1600),
     ];
     try {
       const res = (await link({
         data: {
-          broker: broker.broker.trim(),
+          broker: (broker.broker.trim() || displayName),
           server: broker.server.trim(),
           login: broker.login.trim(),
           password: broker.password,
