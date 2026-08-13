@@ -1438,12 +1438,12 @@ function MetaTraderScreen() {
       setStep(LINK_STEPS.length);
       setLinkedInfo(nfo);
       setInfo(nfo);
-      localStorage.setItem(BROKER_KEY, JSON.stringify(broker));
+      localStorage.setItem(BROKER_KEY, JSON.stringify({ ...broker, broker: broker.broker.trim() || displayName }));
       localStorage.setItem(BROKER_INFO_KEY, JSON.stringify(nfo));
       setSaved(true);
       setPicking(false);
       window.dispatchEvent(new Event("ea:broker"));
-      speak(`${broker.broker} account linked successfully. Available balance ${Math.round(res.balance)} ${res.currency}`);
+      speak(`${displayName} account linked successfully. Available balance ${Math.round(res.balance)} ${res.currency}`);
     } catch {
       timers.forEach(clearTimeout);
       setLinkError("Could not reach the trading server. Please try again.");
@@ -1471,9 +1471,9 @@ function MetaTraderScreen() {
       {saved && (
         <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.05] p-4">
           <div className="flex items-center gap-3">
-            <BrokerLogo name={broker.broker} size={46} />
+            <BrokerLogo name={`${broker.broker} ${broker.server}`} size={46} />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold">{broker.broker}</p>
+              <p className="truncate text-sm font-bold">{displayName}</p>
               <p className="truncate text-[11px] text-white/50">{broker.server} · #{broker.login}</p>
             </div>
             <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-semibold text-emerald-300">
@@ -1575,7 +1575,7 @@ function MetaTraderScreen() {
           step={step}
           error={linkError}
           info={linkedInfo}
-          brokerName={broker.broker}
+          brokerName={displayName}
           onClose={() => { setLinking(false); setLinkError(null); setLinkedInfo(null); }}
         />
       )}
