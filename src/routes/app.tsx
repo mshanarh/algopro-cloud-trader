@@ -1383,6 +1383,8 @@ function MetaTraderScreen() {
   const [linkError, setLinkError] = useState<string | null>(null);
   const [linkedInfo, setLinkedInfo] = useState<BrokerInfo | null>(null);
   const link = useServerFn(linkBrokerAccount);
+  const detected = brandFor(`${broker.broker} ${broker.server}`);
+  const displayName = detected?.name || broker.broker.trim() || broker.server.trim();
 
   useEffect(() => {
     try {
