@@ -114,13 +114,17 @@ export async function linkBroker(d: {
   });
   if ("error" in resolved) return { ok: false, reason: resolved.error };
 
-  const connected = await waitConnected(base, resolved.id, token, 40000);
-  if (!connected) {
-    return { ok: false, reason: "Broker is still connecting. Please try linking again in a minute." };
+  // Fast path: poll account-information directly — it succeeds as soon as the
+  // broker connection is up, usually within a couple of seconds.
+  const deadline = Date.now() + 22000;
+  let info = await maFetch(`${base}/users/current/accounts/${resolved.id}/account-information`, token, undefined, 8000);
+  while (!info.ok && Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 700));
+    info = await maFetch(`${base}/users/current/accounts/${resolved.id}/account-information`, token, undefined, 8000);
   }
-
-  const info = await maFetch(`${base}/users/current/accounts/${resolved.id}/account-information`, token, undefined, 15000);
-  if (!info.ok) return { ok: false, reason: "Connected, but could not read account balance. Check your login details." };
+  if (!info.ok) {
+    return { ok: false, reason: "Broker did not respond. Check your server, login and password, then link again." };
+  }
 
   const b = info.body as Record<string, unknown>;
   return {
