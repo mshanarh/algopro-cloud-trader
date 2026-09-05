@@ -487,8 +487,6 @@ function AppRouter() {
             accent={accent}
             bgVideo={bgVideo}
             onBgVideo={updateVideo}
-            style={style}
-            onStyle={updateStyle}
           />
         )}
         {gated && session && tab === "help" && <HelpScreen />}
