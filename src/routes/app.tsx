@@ -388,13 +388,6 @@ function AppRouter() {
   }, [sessionKey, licInfo]);
 
 
-  const updateStyle = (s: Partial<UIStyle>) => {
-    setStyle((prev) => {
-      const next = { ...prev, ...s };
-      localStorage.setItem(STYLE_KEY, JSON.stringify(next));
-      return next;
-    });
-  };
   const updatePairs = (fn: (p: Pair[]) => Pair[]) => {
     setPairs((prev) => {
       const next = fn(prev);
