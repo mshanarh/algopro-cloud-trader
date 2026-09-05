@@ -388,13 +388,6 @@ function AppRouter() {
   }, [sessionKey, licInfo]);
 
 
-  const updateStyle = (s: Partial<UIStyle>) => {
-    setStyle((prev) => {
-      const next = { ...prev, ...s };
-      localStorage.setItem(STYLE_KEY, JSON.stringify(next));
-      return next;
-    });
-  };
   const updatePairs = (fn: (p: Pair[]) => Pair[]) => {
     setPairs((prev) => {
       const next = fn(prev);
@@ -487,8 +480,6 @@ function AppRouter() {
             accent={accent}
             bgVideo={bgVideo}
             onBgVideo={updateVideo}
-            style={style}
-            onStyle={updateStyle}
           />
         )}
         {gated && session && tab === "help" && <HelpScreen />}
@@ -1520,14 +1511,6 @@ function MetaTraderScreen() {
           )}
 
           <form onSubmit={submit} className="mt-4 space-y-3">
-            <Field label="Broker Name (auto-detected)">
-              <input
-                value={broker.broker}
-                onChange={(e) => setBroker({ ...broker, broker: e.target.value })}
-                placeholder="e.g. Exness, IC Markets"
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
-              />
-            </Field>
             <Field label="Server">
               <input
                 value={broker.server}
@@ -1536,6 +1519,7 @@ function MetaTraderScreen() {
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
               />
             </Field>
+
             <Field label="Login (Account Number)">
               <input
                 value={broker.login}
@@ -1949,16 +1933,15 @@ const PRESET_COLORS = [
 ];
 
 function SettingsScreen({
-  session, onLogout, accent, bgVideo, onBgVideo, style, onStyle,
+  session, onLogout, accent, bgVideo, onBgVideo,
 }: {
   session: Session;
   onLogout: () => void;
   accent: string;
   bgVideo: string;
   onBgVideo: (url: string) => void;
-  style: UIStyle;
-  onStyle: (s: Partial<UIStyle>) => void;
 }) {
+
 
   const videoInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -1980,67 +1963,8 @@ function SettingsScreen({
     <div className="px-5 pt-4">
       <h1 className="text-xl font-bold">Settings</h1>
 
-      {/* Interface style — Home variants */}
-      <div className="mt-4">
-        <h2 className="text-lg font-bold">Interface Style</h2>
-        <p className="mt-1 text-xs text-white/50">Choose your preferred interface design</p>
-        <div className="mt-3 space-y-3">
-          <VariantCard
-            selected={style.home === "v4"}
-            onSelect={() => onStyle({ home: "v4" })}
-            accent={accent}
-            title="V4 Interface (Pro)"
-            desc="Clean modern layout with profile glow effects"
-            bullets={["Centered avatar with glow", "Horizontal action cards", "Image-background robot cards"]}
-          />
-          <VariantCard
-            selected={style.home === "v3"}
-            onSelect={() => onStyle({ home: "v3" })}
-            accent={accent}
-            title="V3 Interface (Futuristic)"
-            desc="Dark futuristic design with glowing effects"
-            bullets={["Dark theme with accent glow", "Animated glowing elements", "Modern card-based layout", "Smooth animations"]}
-          />
-          <VariantCard
-            selected={style.home === "v2"}
-            onSelect={() => onStyle({ home: "v2" })}
-            accent={accent}
-            title="V2 Interface (Modern)"
-            desc="New modern design with centered profile"
-            bullets={["Dark minimalist design", "Large centered profile picture", "Glass-morphism effects"]}
-          />
-          <VariantCard
-            selected={style.home === "v1"}
-            onSelect={() => onStyle({ home: "v1" })}
-            accent={accent}
-            title="V1 Interface (Classic)"
-            desc="Original design with full EA image display"
-            bullets={["Full-screen EA image", "Gradient overlays", "Classic layout"]}
-          />
-          <VariantCard selected={style.home === "v5"} onSelect={() => onStyle({ home: "v5" })} accent={accent} title="V5 Interface (Neon Grid)" desc="Neon cyberpunk grid backdrop" bullets={["Grid backdrop overlay", "Neon-glow square avatar", "Text-shadow neon title"]} />
-          <VariantCard selected={style.home === "v6"} onSelect={() => onStyle({ home: "v6" })} accent={accent} title="V6 Interface (Gradient Card)" desc="Single gradient-bordered card" bullets={["Gradient outer border", "Compact centered layout", "Bold uppercase title"]} />
-        </div>
-      </div>
 
 
-      {/* Bottom navigation variants */}
-      <div className="mt-6">
-        <h2 className="text-lg font-bold">Bottom Navigation</h2>
-        <p className="mt-1 text-xs text-white/50">Pick how the bottom navigation bar looks</p>
-        <div className="mt-3 space-y-3">
-          {NAV_VARIANTS.map((n) => (
-            <VariantCard
-              key={n.id}
-              selected={style.nav === n.id}
-              onSelect={() => onStyle({ nav: n.id })}
-              accent={accent}
-              title={n.title}
-              desc={n.desc}
-              bullets={n.bullets}
-            />
-          ))}
-        </div>
-      </div>
 
 
       {/* App color — swipe left on Home to change */}
@@ -2180,54 +2104,8 @@ function HelpScreen() {
 
 
 
-function VariantCard({ selected, onSelect, accent, title, desc, bullets }: {
-  selected: boolean; onSelect: () => void; accent: string; title: string; desc: string; bullets: string[];
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className="relative w-full rounded-2xl border p-4 text-left transition"
-      style={{
-        borderColor: selected ? accent : "rgba(255,255,255,0.08)",
-        backgroundColor: selected ? `color-mix(in oklab, ${accent} 10%, transparent)` : "rgba(255,255,255,0.03)",
-        boxShadow: selected ? `0 0 0 1px ${accent}, 0 0 25px -8px ${accent}` : "none",
-      }}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold">{title}</p>
-          <p className="mt-0.5 text-xs text-white/50">{desc}</p>
-        </div>
-        {selected && (
-          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full" style={{ backgroundColor: `color-mix(in oklab, ${accent} 25%, transparent)`, color: accent }}>
-            ✓
-          </span>
-        )}
-      </div>
-      <ul className="mt-3 space-y-1.5">
-        {bullets.map((b) => (
-          <li key={b} className="flex items-center gap-2 text-[11px] text-white/70">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: accent }} />
-            {b}
-          </li>
-        ))}
-      </ul>
-    </button>
-  );
-}
 
-type NavVariantMeta = { id: NavVariant; title: string; desc: string; bullets: string[] };
-const NAV_VARIANTS: NavVariantMeta[] = [
-  { id: "v1", title: "V1 — Classic Bar", desc: "Full-width bar pinned to the bottom edge", bullets: ["Edge-to-edge", "Subtle blur background", "Top hairline divider"] },
-  { id: "v2", title: "V2 — Floating Glow Pill", desc: "Detached pill that floats above the screen with a brand-color glow border", bullets: ["Floating pill", "Brand-color glow border", "Active tab highlight chip"] },
-  { id: "v3", title: "V3 — Active Pop Dock", desc: "Active tab lifts above the bar with a brand-color halo and reveals its label", bullets: ["Active tab pops up", "Brand-color glow halo", "Reveal-on-active label"] },
-  { id: "v4", title: "V4 — Magnetic Slide Pill", desc: "A glowing brand-color pill slides smoothly between tabs", bullets: ["Single sliding indicator", "Smooth animated transition", "Tabs always show icon + label"] },
-  { id: "v5", title: "V5 — Floating Chips", desc: "No bar at all — each tab is its own floating capsule. Active chip expands and lights up", bullets: ["Independent floating capsules", "Active chip expands with label", "Brand-color glow halo on active"] },
-  { id: "v6", title: "V6 — Light Beam Edge", desc: "Anchored bar with a vertical beam of brand-color light shining through the active tab", bullets: ["Anchored to bottom edge", "Vertical light beam on active", "Brand-color underline cap"] },
-  { id: "v7", title: "V7 — Liquid Glass Dock", desc: "iOS-style frosted-glass dock. Clean, no glow — just translucent material with a soft active pill", bullets: ["Heavy translucent blur (iOS)", "No border, no glow", "Subtle white-tinted active pill"] },
-  { id: "v8", title: "V8 — Minimal Dot", desc: "Just icons. A single glowing brand-color dot under the active tab. Minimum chrome.", bullets: ["Icons only — no labels, no bar", "Active dot with PillGlow", "Cleanest, lowest visual weight"] },
-];
+
 
 type TabId = "home" | "symbols" | "metatrader" | "scanner" | "settings" | "help";
 
