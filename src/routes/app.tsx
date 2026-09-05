@@ -1520,14 +1520,6 @@ function MetaTraderScreen() {
           )}
 
           <form onSubmit={submit} className="mt-4 space-y-3">
-            <Field label="Broker Name (auto-detected)">
-              <input
-                value={broker.broker}
-                onChange={(e) => setBroker({ ...broker, broker: e.target.value })}
-                placeholder="e.g. Exness, IC Markets"
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
-              />
-            </Field>
             <Field label="Server">
               <input
                 value={broker.server}
@@ -1536,6 +1528,7 @@ function MetaTraderScreen() {
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
               />
             </Field>
+
             <Field label="Login (Account Number)">
               <input
                 value={broker.login}
