@@ -1942,16 +1942,15 @@ const PRESET_COLORS = [
 ];
 
 function SettingsScreen({
-  session, onLogout, accent, bgVideo, onBgVideo, style, onStyle,
+  session, onLogout, accent, bgVideo, onBgVideo,
 }: {
   session: Session;
   onLogout: () => void;
   accent: string;
   bgVideo: string;
   onBgVideo: (url: string) => void;
-  style: UIStyle;
-  onStyle: (s: Partial<UIStyle>) => void;
 }) {
+
 
   const videoInputRef = useRef<HTMLInputElement | null>(null);
 
