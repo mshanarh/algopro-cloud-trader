@@ -2114,54 +2114,8 @@ function HelpScreen() {
 
 
 
-function VariantCard({ selected, onSelect, accent, title, desc, bullets }: {
-  selected: boolean; onSelect: () => void; accent: string; title: string; desc: string; bullets: string[];
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className="relative w-full rounded-2xl border p-4 text-left transition"
-      style={{
-        borderColor: selected ? accent : "rgba(255,255,255,0.08)",
-        backgroundColor: selected ? `color-mix(in oklab, ${accent} 10%, transparent)` : "rgba(255,255,255,0.03)",
-        boxShadow: selected ? `0 0 0 1px ${accent}, 0 0 25px -8px ${accent}` : "none",
-      }}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold">{title}</p>
-          <p className="mt-0.5 text-xs text-white/50">{desc}</p>
-        </div>
-        {selected && (
-          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full" style={{ backgroundColor: `color-mix(in oklab, ${accent} 25%, transparent)`, color: accent }}>
-            ✓
-          </span>
-        )}
-      </div>
-      <ul className="mt-3 space-y-1.5">
-        {bullets.map((b) => (
-          <li key={b} className="flex items-center gap-2 text-[11px] text-white/70">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: accent }} />
-            {b}
-          </li>
-        ))}
-      </ul>
-    </button>
-  );
-}
 
-type NavVariantMeta = { id: NavVariant; title: string; desc: string; bullets: string[] };
-const NAV_VARIANTS: NavVariantMeta[] = [
-  { id: "v1", title: "V1 — Classic Bar", desc: "Full-width bar pinned to the bottom edge", bullets: ["Edge-to-edge", "Subtle blur background", "Top hairline divider"] },
-  { id: "v2", title: "V2 — Floating Glow Pill", desc: "Detached pill that floats above the screen with a brand-color glow border", bullets: ["Floating pill", "Brand-color glow border", "Active tab highlight chip"] },
-  { id: "v3", title: "V3 — Active Pop Dock", desc: "Active tab lifts above the bar with a brand-color halo and reveals its label", bullets: ["Active tab pops up", "Brand-color glow halo", "Reveal-on-active label"] },
-  { id: "v4", title: "V4 — Magnetic Slide Pill", desc: "A glowing brand-color pill slides smoothly between tabs", bullets: ["Single sliding indicator", "Smooth animated transition", "Tabs always show icon + label"] },
-  { id: "v5", title: "V5 — Floating Chips", desc: "No bar at all — each tab is its own floating capsule. Active chip expands and lights up", bullets: ["Independent floating capsules", "Active chip expands with label", "Brand-color glow halo on active"] },
-  { id: "v6", title: "V6 — Light Beam Edge", desc: "Anchored bar with a vertical beam of brand-color light shining through the active tab", bullets: ["Anchored to bottom edge", "Vertical light beam on active", "Brand-color underline cap"] },
-  { id: "v7", title: "V7 — Liquid Glass Dock", desc: "iOS-style frosted-glass dock. Clean, no glow — just translucent material with a soft active pill", bullets: ["Heavy translucent blur (iOS)", "No border, no glow", "Subtle white-tinted active pill"] },
-  { id: "v8", title: "V8 — Minimal Dot", desc: "Just icons. A single glowing brand-color dot under the active tab. Minimum chrome.", bullets: ["Icons only — no labels, no bar", "Active dot with PillGlow", "Cleanest, lowest visual weight"] },
-];
+
 
 type TabId = "home" | "symbols" | "metatrader" | "scanner" | "settings" | "help";
 
