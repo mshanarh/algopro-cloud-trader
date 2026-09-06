@@ -58,7 +58,9 @@ function LoginPage() {
             return;
           }
         }
+        try { await notifyRegistrationPending(); } catch { /* email is best-effort */ }
         toast.success("Account created — waiting for admin approval");
+
         navigate({ to: "/pending", replace: true });
         return;
       } else {
