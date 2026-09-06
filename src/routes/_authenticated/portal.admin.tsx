@@ -150,7 +150,7 @@ function UserRow({ u, onSave, pending }: { u: User; onSave: (v: { approved?: boo
           ) : (
             <button onClick={() => onSave({ approved: false })} disabled={pending}
               className="inline-flex items-center gap-1 rounded-md border border-destructive/30 px-2.5 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10">
-              <X className="h-3 w-3" /> Revoke
+              <X className="h-3 w-3" /> Reject
             </button>
           )}
         </div>
