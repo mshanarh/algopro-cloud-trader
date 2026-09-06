@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
+import { notifyRegistrationPending } from "@/lib/portal.functions";
+
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search) => ({
