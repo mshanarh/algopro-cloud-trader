@@ -112,9 +112,11 @@ function UserRow({ u, onSave, pending }: { u: User; onSave: (v: { approved?: boo
         <div className="text-xs text-muted-foreground">{u.full_name}</div>
       </td>
       <td className="px-4 py-3 text-xs">
+        <div>{u.email || "—"}</div>
         <div>{u.mobile || "—"}</div>
         <div className="text-muted-foreground">{u.tiktok_url || u.instagram_url || ""}</div>
       </td>
+
       <td className="px-4 py-3">
         {u.approved ? (
           <span className="rounded-full bg-accent/15 px-2.5 py-1 text-xs font-medium text-accent-foreground">Approved</span>
