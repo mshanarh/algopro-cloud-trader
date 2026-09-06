@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
+import { notifyRegistrationPending } from "@/lib/portal.functions";
+
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search) => ({
@@ -58,7 +60,9 @@ function LoginPage() {
             return;
           }
         }
+        try { await notifyRegistrationPending(); } catch { /* email is best-effort */ }
         toast.success("Account created — waiting for admin approval");
+
         navigate({ to: "/pending", replace: true });
         return;
       } else {

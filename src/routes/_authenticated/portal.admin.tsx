@@ -26,9 +26,15 @@ function AdminPage() {
   const [reEmail, setReEmail] = useState("");
   const m = useMutation({
     mutationFn: (v: { user_id: string; approved?: boolean; license_limit?: number }) => update({ data: v }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin", "users"] }); toast.success("Updated"); },
+    onSuccess: (r, v) => {
+      qc.invalidateQueries({ queryKey: ["admin", "users"] });
+      if (v.approved === true) toast.success(r.emailed ? "Approved · activation email sent" : "Approved · email could not be sent");
+      else if (v.approved === false) toast.success("Rejected — account set back to pending");
+      else toast.success("Updated");
+    },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
+
   const reM = useMutation({
     mutationFn: (email: string) => reactivate({ data: { email, activations: 1 } }),
     onSuccess: (r) => {
@@ -106,9 +112,11 @@ function UserRow({ u, onSave, pending }: { u: User; onSave: (v: { approved?: boo
         <div className="text-xs text-muted-foreground">{u.full_name}</div>
       </td>
       <td className="px-4 py-3 text-xs">
+        <div>{u.email || "—"}</div>
         <div>{u.mobile || "—"}</div>
         <div className="text-muted-foreground">{u.tiktok_url || u.instagram_url || ""}</div>
       </td>
+
       <td className="px-4 py-3">
         {u.approved ? (
           <span className="rounded-full bg-accent/15 px-2.5 py-1 text-xs font-medium text-accent-foreground">Approved</span>
@@ -142,7 +150,7 @@ function UserRow({ u, onSave, pending }: { u: User; onSave: (v: { approved?: boo
           ) : (
             <button onClick={() => onSave({ approved: false })} disabled={pending}
               className="inline-flex items-center gap-1 rounded-md border border-destructive/30 px-2.5 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10">
-              <X className="h-3 w-3" /> Revoke
+              <X className="h-3 w-3" /> Reject
             </button>
           )}
         </div>

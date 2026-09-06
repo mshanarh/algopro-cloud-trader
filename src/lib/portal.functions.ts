@@ -373,7 +373,22 @@ export const adminListUsers = createServerFn({ method: "GET" })
       .select("id, full_name, display_name, mobile, tiktok_url, instagram_url, approved, license_limit, created_at")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return data ?? [];
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: users } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const emailById = new Map((users?.users ?? []).map((u) => [u.id, u.email ?? ""]));
+    return (data ?? []).map((p) => ({ ...p, email: emailById.get(p.id) ?? "" }));
+  });
+
+export const notifyRegistrationPending = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: u } = await supabaseAdmin.auth.admin.getUserById(context.userId);
+    const email = u?.user?.email;
+    if (!email) return { ok: false as const };
+    const { sendMail, PENDING_SUBJECT, PENDING_BODY } = await import("./mail.server");
+    const r = await sendMail({ to: email, subject: PENDING_SUBJECT, title: "You're on the waiting list", text: PENDING_BODY });
+    return { ok: r.ok };
   });
 
 export const adminUpdateUser = createServerFn({ method: "POST" })
@@ -391,8 +406,21 @@ export const adminUpdateUser = createServerFn({ method: "POST" })
     if (data.license_limit !== undefined) patch.license_limit = data.license_limit;
     const { error } = await context.supabase.from("profiles").update(patch).eq("id", data.user_id);
     if (error) throw new Error(error.message);
-    return { ok: true };
+
+    let emailed = false;
+    if (data.approved === true) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: u } = await supabaseAdmin.auth.admin.getUserById(data.user_id);
+      const email = u?.user?.email;
+      if (email) {
+        const { sendMail, ACTIVE_SUBJECT, ACTIVE_BODY } = await import("./mail.server");
+        const r = await sendMail({ to: email, subject: ACTIVE_SUBJECT, title: "Your portal is active", text: ACTIVE_BODY });
+        emailed = r.ok;
+      }
+    }
+    return { ok: true, emailed };
   });
+
 
 export const updateLicenseStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

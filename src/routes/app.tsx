@@ -7,7 +7,7 @@ import {
   HelpCircle, Wifi, Battery, Signal, Flame,
   TrendingUp, TrendingDown, LogOut, ShieldCheck,
   LineChart, Database, Target, Trash2, BarChart3, Plus, Palette, Film, X,
-  Upload, Send, ScanLine, ArrowLeft, FileText, AlertTriangle, Camera as CameraIcon, Image as ImageIcon, Clock, ChevronDown,
+  Upload, Send, ScanLine, ArrowLeft, FileText, AlertTriangle, Camera as CameraIcon, Image as ImageIcon, Clock, ChevronDown, LayoutGrid, Check,
 } from "lucide-react";
 
 import { validateLicense, validateMentor, checkAppAccess, reactivateAppByEmail, getLicenseInfo } from "@/lib/portal.functions";
@@ -410,6 +410,13 @@ function AppRouter() {
     setTab("home");
   };
   const updateAccent = (c: string) => { setAccent(c); localStorage.setItem(THEME_KEY, c); };
+  const updateStyle = (patch: Partial<UIStyle>) => {
+    setStyle((prev) => {
+      const next = { ...prev, ...patch };
+      try { localStorage.setItem(STYLE_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
   const updateVideo = (url: string) => {
     setBgVideo(url);
     if (url) localStorage.setItem(VIDEO_KEY, url);
@@ -480,6 +487,8 @@ function AppRouter() {
             accent={accent}
             bgVideo={bgVideo}
             onBgVideo={updateVideo}
+            style={style}
+            onStyle={updateStyle}
           />
         )}
         {gated && session && tab === "help" && <HelpScreen />}
@@ -1373,6 +1382,8 @@ function MetaTraderScreen() {
   const [step, setStep] = useState(0);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [linkedInfo, setLinkedInfo] = useState<BrokerInfo | null>(null);
+  const [platform, setPlatform] = useState<"mt4" | "mt5">("mt5");
+  const [accountType, setAccountType] = useState("Standard");
   const link = useServerFn(linkBrokerAccount);
   const detected = brandFor(`${broker.broker} ${broker.server}`);
   const displayName = detected?.name || broker.broker.trim() || broker.server.trim();
@@ -1409,7 +1420,7 @@ function MetaTraderScreen() {
           server: broker.server.trim(),
           login: broker.login.trim(),
           password: broker.password,
-          platform: "mt5",
+          platform,
         },
       })) as
         | { ok: true; balance: number; equity: number; currency: string; name: string; leverage?: number }
@@ -1510,7 +1521,36 @@ function MetaTraderScreen() {
             </div>
           )}
 
+          <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-1">
+            {(["mt4", "mt5"] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPlatform(p)}
+                className={`rounded-xl py-2.5 text-xs font-bold uppercase tracking-wider transition ${
+                  platform === p ? "text-black" : "text-white/60"
+                }`}
+                style={platform === p ? { backgroundColor: "var(--app-accent)" } : undefined}
+              >
+                {p === "mt4" ? "MetaTrader 4" : "MetaTrader 5"}
+              </button>
+            ))}
+          </div>
+
           <form onSubmit={submit} className="mt-4 space-y-3">
+            <Field label="Broker">
+              <select
+                value={broker.broker}
+                onChange={(e) => setBroker({ ...broker, broker: e.target.value })}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
+              >
+                <option value="" className="bg-slate-900">Select your broker</option>
+                {BROKER_BRANDS.map((b) => (
+                  <option key={b.name} value={b.name} className="bg-slate-900">{b.name}</option>
+                ))}
+                <option value="Other" className="bg-slate-900">Other</option>
+              </select>
+            </Field>
             <Field label="Server">
               <input
                 value={broker.server}
@@ -1520,6 +1560,17 @@ function MetaTraderScreen() {
               />
             </Field>
 
+            <Field label="Account Type">
+              <select
+                value={accountType}
+                onChange={(e) => setAccountType(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
+              >
+                {["Standard", "Cent", "Pro", "Raw Spread", "Zero", "ECN", "Demo"].map((t) => (
+                  <option key={t} value={t} className="bg-slate-900">{t}</option>
+                ))}
+              </select>
+            </Field>
             <Field label="Login (Account Number)">
               <input
                 value={broker.login}
@@ -1932,15 +1983,63 @@ const PRESET_COLORS = [
   "#84cc16", "#ffffff",
 ];
 
+const INTERFACES: { id: HomeVariant; label: string; desc: string }[] = [
+  { id: "v4", label: "Interface 1", desc: "3D core console" },
+  { id: "v1", label: "Interface 2", desc: "Full-bleed poster" },
+  { id: "v3", label: "Interface 3", desc: "Half-screen halo" },
+  { id: "v2", label: "Interface 4", desc: "White-to-red poster" },
+];
+
+function InterfaceScreen({
+  current, onPick, onBack, accent,
+}: { current: HomeVariant; onPick: (v: HomeVariant) => void; onBack: () => void; accent: string }) {
+  return (
+    <div className="px-5 pt-4">
+      <button onClick={onBack} className="mb-3 text-xs font-semibold text-white/60">← Settings</button>
+      <h1 className="text-xl font-bold">Interface Style</h1>
+      <p className="text-xs text-white/50">Choose how your Home screen looks.</p>
+      <div className="mt-4 space-y-2">
+        {INTERFACES.map((it) => {
+          const active = current === it.id;
+          return (
+            <button
+              key={it.id}
+              onClick={() => { onPick(it.id); toast.success(`${it.label} applied`); }}
+              className="flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition"
+              style={{
+                borderColor: active ? accent : "rgba(255,255,255,0.1)",
+                backgroundColor: active ? "color-mix(in oklab, var(--app-accent) 12%, transparent)" : "rgba(255,255,255,0.04)",
+              }}
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold">{it.label}</p>
+                <p className="text-[11px] text-white/50">{it.desc}</p>
+              </div>
+              {active && (
+                <span className="grid h-6 w-6 place-items-center rounded-full text-black" style={{ backgroundColor: accent }}>
+                  <Check className="h-3.5 w-3.5" />
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function SettingsScreen({
-  session, onLogout, accent, bgVideo, onBgVideo,
+  session, onLogout, accent, bgVideo, onBgVideo, style, onStyle,
 }: {
   session: Session;
   onLogout: () => void;
   accent: string;
   bgVideo: string;
   onBgVideo: (url: string) => void;
+  style: UIStyle;
+  onStyle: (patch: Partial<UIStyle>) => void;
 }) {
+  const [showInterfaces, setShowInterfaces] = useState(false);
 
 
   const videoInputRef = useRef<HTMLInputElement | null>(null);
@@ -1959,9 +2058,34 @@ function SettingsScreen({
     reader.readAsDataURL(f);
   };
 
+  if (showInterfaces) {
+    return (
+      <InterfaceScreen
+        current={style.home}
+        accent={accent}
+        onPick={(v) => onStyle({ home: v })}
+        onBack={() => setShowInterfaces(false)}
+      />
+    );
+  }
+
+  const currentInterface = INTERFACES.find((i) => i.id === style.home)?.label ?? "Interface 1";
+
   return (
     <div className="px-5 pt-4">
       <h1 className="text-xl font-bold">Settings</h1>
+
+      <p className="mt-4 text-[11px] font-semibold uppercase tracking-wider text-white/40">Appearance</p>
+      <button
+        onClick={() => setShowInterfaces(true)}
+        className="mt-2 flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left"
+      >
+        <div className="flex items-center gap-2">
+          <LayoutGrid className="h-4 w-4" style={{ color: accent }} />
+          <span className="text-sm font-semibold">Interface</span>
+        </div>
+        <span className="text-xs text-white/50">{currentInterface} ›</span>
+      </button>
 
 
 
