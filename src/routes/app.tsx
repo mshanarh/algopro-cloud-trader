@@ -1373,6 +1373,8 @@ function MetaTraderScreen() {
   const [step, setStep] = useState(0);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [linkedInfo, setLinkedInfo] = useState<BrokerInfo | null>(null);
+  const [platform, setPlatform] = useState<"mt4" | "mt5">("mt5");
+  const [accountType, setAccountType] = useState("Standard");
   const link = useServerFn(linkBrokerAccount);
   const detected = brandFor(`${broker.broker} ${broker.server}`);
   const displayName = detected?.name || broker.broker.trim() || broker.server.trim();
@@ -1409,7 +1411,7 @@ function MetaTraderScreen() {
           server: broker.server.trim(),
           login: broker.login.trim(),
           password: broker.password,
-          platform: "mt5",
+          platform,
         },
       })) as
         | { ok: true; balance: number; equity: number; currency: string; name: string; leverage?: number }
@@ -1510,7 +1512,36 @@ function MetaTraderScreen() {
             </div>
           )}
 
+          <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-1">
+            {(["mt4", "mt5"] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPlatform(p)}
+                className={`rounded-xl py-2.5 text-xs font-bold uppercase tracking-wider transition ${
+                  platform === p ? "text-black" : "text-white/60"
+                }`}
+                style={platform === p ? { backgroundColor: "var(--app-accent)" } : undefined}
+              >
+                {p === "mt4" ? "MetaTrader 4" : "MetaTrader 5"}
+              </button>
+            ))}
+          </div>
+
           <form onSubmit={submit} className="mt-4 space-y-3">
+            <Field label="Broker">
+              <select
+                value={broker.broker}
+                onChange={(e) => setBroker({ ...broker, broker: e.target.value })}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
+              >
+                <option value="" className="bg-slate-900">Select your broker</option>
+                {BROKER_BRANDS.map((b) => (
+                  <option key={b.name} value={b.name} className="bg-slate-900">{b.name}</option>
+                ))}
+                <option value="Other" className="bg-slate-900">Other</option>
+              </select>
+            </Field>
             <Field label="Server">
               <input
                 value={broker.server}
@@ -1520,6 +1551,17 @@ function MetaTraderScreen() {
               />
             </Field>
 
+            <Field label="Account Type">
+              <select
+                value={accountType}
+                onChange={(e) => setAccountType(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none focus:border-[var(--app-accent)]"
+              >
+                {["Standard", "Cent", "Pro", "Raw Spread", "Zero", "ECN", "Demo"].map((t) => (
+                  <option key={t} value={t} className="bg-slate-900">{t}</option>
+                ))}
+              </select>
+            </Field>
             <Field label="Login (Account Number)">
               <input
                 value={broker.login}
