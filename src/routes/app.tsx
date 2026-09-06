@@ -410,6 +410,13 @@ function AppRouter() {
     setTab("home");
   };
   const updateAccent = (c: string) => { setAccent(c); localStorage.setItem(THEME_KEY, c); };
+  const updateStyle = (patch: Partial<UIStyle>) => {
+    setStyle((prev) => {
+      const next = { ...prev, ...patch };
+      try { localStorage.setItem(STYLE_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
   const updateVideo = (url: string) => {
     setBgVideo(url);
     if (url) localStorage.setItem(VIDEO_KEY, url);
@@ -480,6 +487,8 @@ function AppRouter() {
             accent={accent}
             bgVideo={bgVideo}
             onBgVideo={updateVideo}
+            style={style}
+            onStyle={updateStyle}
           />
         )}
         {gated && session && tab === "help" && <HelpScreen />}
@@ -1974,15 +1983,63 @@ const PRESET_COLORS = [
   "#84cc16", "#ffffff",
 ];
 
+const INTERFACES: { id: HomeVariant; label: string; desc: string }[] = [
+  { id: "v4", label: "Interface 1", desc: "3D core console" },
+  { id: "v1", label: "Interface 2", desc: "Full-bleed poster" },
+  { id: "v3", label: "Interface 3", desc: "Half-screen halo" },
+  { id: "v2", label: "Interface 4", desc: "White-to-red poster" },
+];
+
+function InterfaceScreen({
+  current, onPick, onBack, accent,
+}: { current: HomeVariant; onPick: (v: HomeVariant) => void; onBack: () => void; accent: string }) {
+  return (
+    <div className="px-5 pt-4">
+      <button onClick={onBack} className="mb-3 text-xs font-semibold text-white/60">← Settings</button>
+      <h1 className="text-xl font-bold">Interface Style</h1>
+      <p className="text-xs text-white/50">Choose how your Home screen looks.</p>
+      <div className="mt-4 space-y-2">
+        {INTERFACES.map((it) => {
+          const active = current === it.id;
+          return (
+            <button
+              key={it.id}
+              onClick={() => { onPick(it.id); toast.success(`${it.label} applied`); }}
+              className="flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition"
+              style={{
+                borderColor: active ? accent : "rgba(255,255,255,0.1)",
+                backgroundColor: active ? "color-mix(in oklab, var(--app-accent) 12%, transparent)" : "rgba(255,255,255,0.04)",
+              }}
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold">{it.label}</p>
+                <p className="text-[11px] text-white/50">{it.desc}</p>
+              </div>
+              {active && (
+                <span className="grid h-6 w-6 place-items-center rounded-full text-black" style={{ backgroundColor: accent }}>
+                  <Check className="h-3.5 w-3.5" />
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function SettingsScreen({
-  session, onLogout, accent, bgVideo, onBgVideo,
+  session, onLogout, accent, bgVideo, onBgVideo, style, onStyle,
 }: {
   session: Session;
   onLogout: () => void;
   accent: string;
   bgVideo: string;
   onBgVideo: (url: string) => void;
+  style: UIStyle;
+  onStyle: (patch: Partial<UIStyle>) => void;
 }) {
+  const [showInterfaces, setShowInterfaces] = useState(false);
 
 
   const videoInputRef = useRef<HTMLInputElement | null>(null);
@@ -2001,9 +2058,34 @@ function SettingsScreen({
     reader.readAsDataURL(f);
   };
 
+  if (showInterfaces) {
+    return (
+      <InterfaceScreen
+        current={style.home}
+        accent={accent}
+        onPick={(v) => onStyle({ home: v })}
+        onBack={() => setShowInterfaces(false)}
+      />
+    );
+  }
+
+  const currentInterface = INTERFACES.find((i) => i.id === style.home)?.label ?? "Interface 1";
+
   return (
     <div className="px-5 pt-4">
       <h1 className="text-xl font-bold">Settings</h1>
+
+      <p className="mt-4 text-[11px] font-semibold uppercase tracking-wider text-white/40">Appearance</p>
+      <button
+        onClick={() => setShowInterfaces(true)}
+        className="mt-2 flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left"
+      >
+        <div className="flex items-center gap-2">
+          <LayoutGrid className="h-4 w-4" style={{ color: accent }} />
+          <span className="text-sm font-semibold">Interface</span>
+        </div>
+        <span className="text-xs text-white/50">{currentInterface} ›</span>
+      </button>
 
 
 
