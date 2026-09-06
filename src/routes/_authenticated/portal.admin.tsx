@@ -26,9 +26,15 @@ function AdminPage() {
   const [reEmail, setReEmail] = useState("");
   const m = useMutation({
     mutationFn: (v: { user_id: string; approved?: boolean; license_limit?: number }) => update({ data: v }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin", "users"] }); toast.success("Updated"); },
+    onSuccess: (r, v) => {
+      qc.invalidateQueries({ queryKey: ["admin", "users"] });
+      if (v.approved === true) toast.success(r.emailed ? "Approved · activation email sent" : "Approved · email could not be sent");
+      else if (v.approved === false) toast.success("Rejected — account set back to pending");
+      else toast.success("Updated");
+    },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
+
   const reM = useMutation({
     mutationFn: (email: string) => reactivate({ data: { email, activations: 1 } }),
     onSuccess: (r) => {
