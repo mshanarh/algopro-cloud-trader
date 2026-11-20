@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { claimEmail, isAutoApprovedEmail } from "./auto-approval";
 
 const PlanEnum = z.enum(["3_days", "5_days", "30_days", "3_months", "6_months", "1_year"]);
 const PlanDays: Record<z.infer<typeof PlanEnum>, number> = {
@@ -78,7 +79,8 @@ export const validateMentor = createServerFn({ method: "POST" })
       .from("profiles").select("mentor_id, approved, display_name, full_name").eq("id", u.id).maybeSingle();
     if (!profile) return { ok: false as const, reason: "Profile not found" };
     if (profile.mentor_id !== mentor_id) return { ok: false as const, reason: "Mentor ID does not match" };
-    if (!profile.approved) return { ok: false as const, reason: "Account pending admin approval" };
+    if (!profile.approved && !isAutoApprovedEmail(u.email))
+      return { ok: false as const, reason: "Account pending admin approval" };
     const { data: roles } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", u.id);
     const is_admin = (roles ?? []).some((r) => r.role === "admin");
     return { ok: true as const, is_admin, name: profile.display_name || profile.full_name || "Trader" };
@@ -295,13 +297,15 @@ export const createLicense = createServerFn({ method: "POST" })
     // Enforce approval + license limit (admins bypass limit)
     const { data: profile } = await context.supabase
       .from("profiles").select("approved, license_limit").eq("id", context.userId).single();
-    if (!profile?.approved) throw new Error("Account not approved by admin yet");
+    if (!profile?.approved && !isAutoApprovedEmail(claimEmail(context.claims)))
+      throw new Error("Account not approved by admin yet");
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) {
       const { count } = await context.supabase
         .from("licenses").select("id", { count: "exact", head: true }).eq("owner_id", context.userId);
-      if ((count ?? 0) >= (profile.license_limit ?? 0)) {
-        throw new Error(`Licence limit reached (${profile.license_limit}). Contact admin to increase.`);
+      const limit = profile?.license_limit ?? 0;
+      if ((count ?? 0) >= limit) {
+        throw new Error(`Licence limit reached (${limit}). Contact admin to increase.`);
       }
     }
     const days = PlanDays[data.plan];
@@ -356,7 +360,7 @@ export const getMyStatus = createServerFn({ method: "GET" })
       context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
     ]);
     return {
-      approved: !!profile?.approved,
+      approved: !!profile?.approved || isAutoApprovedEmail(claimEmail(context.claims)),
       license_limit: profile?.license_limit ?? 0,
       is_admin: (roles ?? []).some((r) => r.role === "admin"),
       name: profile?.display_name || profile?.full_name || "Trader",
@@ -377,6 +381,25 @@ export const adminListUsers = createServerFn({ method: "GET" })
     const { data: users } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
     const emailById = new Map((users?.users ?? []).map((u) => [u.id, u.email ?? ""]));
     return (data ?? []).map((p) => ({ ...p, email: emailById.get(p.id) ?? "" }));
+  });
+
+export const claimSignupApproval = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const email = claimEmail(context.claims);
+    if (!isAutoApprovedEmail(email)) return { approved: false as const };
+
+    // Persist the approval so admin screens reflect it. This needs the service
+    // role key; the gate in getMyStatus also honours the allowlist directly, so
+    // a missing key never blocks the account.
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin.from("profiles").update({ approved: true }).eq("id", context.userId);
+    } catch (err) {
+      console.warn("[auto-approval] could not persist approval", err);
+    }
+
+    return { approved: true as const };
   });
 
 export const notifyRegistrationPending = createServerFn({ method: "POST" })

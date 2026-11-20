@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { LogIn, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
-import { notifyRegistrationPending } from "@/lib/portal.functions";
+import { claimSignupApproval, notifyRegistrationPending } from "@/lib/portal.functions";
 import { PlatformLogo } from "@/components/PlatformLogo";
 
 export const Route = createFileRoute("/login")({
@@ -95,6 +95,13 @@ function LoginPage() {
             return;
           }
         }
+        const approval = await claimSignupApproval().catch(() => null);
+        if (approval?.approved) {
+          toast.success("Account created and approved — welcome!");
+          navigate({ to: "/portal", replace: true });
+          return;
+        }
+
         try { await notifyRegistrationPending(); } catch { /* email is best-effort */ }
         toast.success("Account created — waiting for admin approval");
 
@@ -103,6 +110,8 @@ function LoginPage() {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        // Covers accounts created before auto-approval existed.
+        await claimSignupApproval().catch(() => null);
         toast.success("Welcome Master");
       }
       navigate({ to: search.redirect || "/portal", replace: true });
