@@ -74,7 +74,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "EA Force — Cloud hosting for Forex EAs" },
+      { title: "EA Vault — Cloud hosting for Forex EAs" },
       { name: "description", content: "Run MetaTrader EAs 24/7 on secure cloud VPS. Control from your phone." },
     ],
     links: [{ rel: "stylesheet", href: appCss }],

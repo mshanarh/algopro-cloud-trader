@@ -33,7 +33,7 @@ export async function resolveAccountId(
   const list = await maFetch(`${PROVISIONING}/users/current/accounts`, token);
   if (!list.ok) {
     if (list.status === 401) {
-      return { error: "Live trading token is invalid or expired. Please update the MetaApi token in EA Force settings." };
+      return { error: "Live trading token is invalid or expired. Please update the MetaApi token in EA Vault settings." };
     }
     return { error: `MetaApi accounts lookup failed (${list.status})` };
   }
@@ -54,7 +54,7 @@ export async function resolveAccountId(
   const create = await maFetch(`${PROVISIONING}/users/current/accounts`, token, {
     method: "POST",
     body: JSON.stringify({
-      name: `EAForce-${d.login}`,
+      name: `EAVault-${d.login}`,
       type: "cloud-g2",
       login: d.login,
       password: d.password,
@@ -195,7 +195,7 @@ export async function placeOrders(d: {
           volume: d.lot,
           ...(d.sl ? { stopLoss: d.sl } : {}),
           ...(d.tp ? { takeProfit: d.tp } : {}),
-          comment: "EAForce",
+          comment: "EAVault",
         }),
       });
       const j = (await res.json().catch(() => ({}))) as {

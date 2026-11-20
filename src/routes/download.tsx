@@ -7,8 +7,8 @@ export const Route = createFileRoute("/download")({
   component: DownloadPage,
   head: () => ({
     meta: [
-      { title: "Download EA Force — Install on iPhone or Android" },
-      { name: "description", content: "Install the EA Force mobile app on your iPhone or Android phone in seconds." },
+      { title: "Download EA Vault — Install on iPhone or Android" },
+      { name: "description", content: "Install the EA Vault mobile app on your iPhone or Android phone in seconds." },
     ],
     links: [{ rel: "manifest", href: "/manifest.webmanifest" }],
   }),
@@ -39,7 +39,7 @@ function DownloadPage() {
     const onInstalled = () => {
       setInstalled(true);
       setDeferred(null);
-      toast.success("EA Force installed");
+      toast.success("EA Vault installed");
     };
     window.addEventListener("beforeinstallprompt", onPrompt);
     window.addEventListener("appinstalled", onInstalled);
@@ -82,9 +82,9 @@ function DownloadPage() {
           <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-2xl shadow-violet-500/40">
             <Download className="h-8 w-8" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Download EA Force</h1>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Download EA Vault</h1>
           <p className="mt-3 text-white/70">
-            Install the EA Force mobile app on your phone and control your bots from anywhere.
+            Install the EA Vault mobile app on your phone and control your bots from anywhere.
           </p>
 
           <button
@@ -124,7 +124,7 @@ function DownloadPage() {
               </li>
               <li className="flex gap-3">
                 <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white/10 text-xs font-bold">3</span>
-                Open <b className="mx-1">EA Force</b> from your home screen.
+                Open <b className="mx-1">EA Vault</b> from your home screen.
               </li>
             </ol>
           </div>

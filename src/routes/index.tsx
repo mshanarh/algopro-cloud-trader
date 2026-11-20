@@ -15,13 +15,13 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "EA Force — Convert your desktop EA to a mobile bot" },
+      { title: "EA Vault — Convert your desktop EA to a mobile bot" },
       {
         name: "description",
         content:
-          "EA Force syncs your MT4/MT5 expert advisor signals to every connected mobile client in real time. Any broker, any device.",
+          "EA Vault syncs your MT4/MT5 expert advisor signals to every connected mobile client in real time. Any broker, any device.",
       },
-      { property: "og:title", content: "EA Force — Cloud EA hosting for mobile traders" },
+      { property: "og:title", content: "EA Vault — Cloud EA hosting for mobile traders" },
       { property: "og:description", content: "Real-time EA + SL/TP sync to your clients' mobile app." },
       { property: "og:image", content: appPreview.url },
       { name: "twitter:card", content: "summary_large_image" },
@@ -37,7 +37,7 @@ function Logo() {
       <span className="grid h-8 w-8 place-items-center rounded-lg bg-[image:var(--gradient-purple)] text-sm font-black text-primary-foreground">
         A
       </span>
-      <span className="text-lg font-bold tracking-tight">EA Force</span>
+      <span className="text-lg font-bold tracking-tight">EA Vault</span>
     </Link>
   );
 }
@@ -80,7 +80,7 @@ function Hero() {
           Convert your desktop EA <br className="hidden sm:block" /> to a mobile bot
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-base text-white/70">
-          EA Force streams your MT4/MT5 signals — including SL/TP updates — to every connected
+          EA Vault streams your MT4/MT5 signals — including SL/TP updates — to every connected
           client's phone in real time.
         </p>
         <div className="mt-7 flex flex-wrap justify-center gap-3">
@@ -107,7 +107,7 @@ function Hero() {
         />
         <img
           src={appPreview.url}
-          alt="EA Force mobile app showing the Sniper Maestro bot with Delete, Play and Symbols controls"
+          alt="EA Vault mobile app showing the Sniper Maestro bot with Delete, Play and Symbols controls"
           className="mx-auto w-full rounded-3xl border border-white/10 shadow-2xl shadow-emerald-500/10"
           loading="eager"
         />
@@ -137,7 +137,7 @@ function WhyChoose() {
   return (
     <section id="features" className="px-5 py-20 text-white">
       <div className="mx-auto max-w-3xl text-center">
-        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Why choose EA Force?</h2>
+        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Why choose EA Vault?</h2>
         <p className="mt-3 text-white/60">Convert your desktop EA to mobile with real-time SL/TP sync.</p>
       </div>
       <div className="mx-auto mt-12 max-w-2xl space-y-4">
@@ -172,13 +172,13 @@ function Compare() {
   return (
     <section id="compare" className="px-5 py-20 text-white">
       <div className="mx-auto max-w-3xl text-center">
-        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">EA Force vs Others</h2>
+        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">EA Vault vs Others</h2>
         <p className="mt-3 text-white/60">See what makes us different</p>
       </div>
       <div className="mx-auto mt-10 max-w-2xl overflow-hidden rounded-2xl border border-white/5 bg-white/[0.03]">
         <div className="grid grid-cols-3 gap-2 px-5 py-4 text-sm font-semibold">
           <div>Feature</div>
-          <div className="text-center">EA Force</div>
+          <div className="text-center">EA Vault</div>
           <div className="text-center text-white/50">Others</div>
         </div>
         {rows.map(([label, us, them]) => (
@@ -220,10 +220,10 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 function FAQ() {
   const faqs = [
     { q: "Which brokers are compatible?", a: "Every MT4 and MT5 broker — over 40,000 worldwide. No restrictions." },
-    { q: "How does the EA connection work?", a: "Upload your EA to EA Force, generate a licence key and share it with your client. Their mobile app connects and mirrors trades." },
+    { q: "How does the EA connection work?", a: "Upload your EA to EA Vault, generate a licence key and share it with your client. Their mobile app connects and mirrors trades." },
     { q: "Do SL/TP changes sync to client mobile apps?", a: "Yes. Any SL/TP edit on the master EA is pushed to every connected mobile client instantly." },
-    { q: "How do clients access my EA?", a: "You issue them a licence key from your portal. They enter it in the EA Force mobile app and are connected." },
-    { q: "Is EA Force a trading robot?", a: "No — EA Force is the delivery layer. Your EA is the robot; we make it accessible on mobile." },
+    { q: "How do clients access my EA?", a: "You issue them a licence key from your portal. They enter it in the EA Vault mobile app and are connected." },
+    { q: "Is EA Vault a trading robot?", a: "No — EA Vault is the delivery layer. Your EA is the robot; we make it accessible on mobile." },
   ];
   return (
     <section id="faq" className="px-5 py-20 text-white">

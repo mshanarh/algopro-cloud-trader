@@ -1,7 +1,7 @@
 {
-  "name": "EA Force",
-  "short_name": "EA Force",
-  "description": "EA Force mobile bot",
+  "name": "EA Vault",
+  "short_name": "EA Vault",
+  "description": "EA Vault mobile bot",
   "start_url": "/app",
   "scope": "/app",
   "display": "standalone",

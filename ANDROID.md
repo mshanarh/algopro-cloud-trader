@@ -1,4 +1,4 @@
-# Build the EA Force native Android app
+# Build the EA Vault native Android app
 
 The app is wrapped with Capacitor. Follow these steps on your own computer
 (Android Studio + Node.js installed).
@@ -29,7 +29,7 @@ The app is wrapped with Capacitor. Follow these steps on your own computer
 
 ## Pointing the app at production
 
-`capacitor.config.ts` -> `server.url` currently loads the live EA Force web app.
+`capacitor.config.ts` -> `server.url` currently loads the live EA Vault web app.
 After you publish, change it to your published domain, e.g.
 
 ```ts

@@ -40,7 +40,7 @@ function Dashboard() {
 
   return (
     <div>
-      <PageHeader title={`${greeting()}, ${name}`} subtitle={`Welcome to EA Force Portal — All systems are running smoothly. You have ${data.stats.active} active licences.`}>
+      <PageHeader title={`${greeting()}, ${name}`} subtitle={`Welcome to EA Vault Portal — All systems are running smoothly. You have ${data.stats.active} active licences.`}>
         <div className="flex flex-wrap items-center gap-3">
           <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur">
             Mentor ID: <span className="font-mono">{data.profile?.mentor_id}</span>

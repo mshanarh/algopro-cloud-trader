@@ -16,7 +16,7 @@ export const Route = createFileRoute("/login")({
     if (data.session) throw redirect({ to: search.redirect });
   },
   component: LoginPage,
-  head: () => ({ meta: [{ title: "Sign in — EA Force Portal" }] }),
+  head: () => ({ meta: [{ title: "Sign in — EA Vault Portal" }] }),
 });
 
 function LoginPage() {
@@ -100,7 +100,7 @@ function LoginPage() {
         </Link>
         <Link to="/" className="mb-6 flex items-center justify-center gap-2 text-white">
           <span className="grid h-9 w-9 place-items-center rounded-lg bg-[image:var(--gradient-purple)] font-black">A</span>
-          <span className="text-xl font-bold">EA Force</span>
+          <span className="text-xl font-bold">EA Vault</span>
         </Link>
         <div className="rounded-2xl border border-white/10 bg-white/95 p-7 shadow-2xl backdrop-blur">
           <div className="mb-5 flex rounded-lg bg-secondary p-1 text-sm font-medium">

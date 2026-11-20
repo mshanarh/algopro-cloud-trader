@@ -18,7 +18,7 @@ import { executeLiveTrades, linkBrokerAccount } from "@/lib/trade.functions";
 export const Route = createFileRoute("/app")({
   component: PhoneApp,
   head: () => ({
-    meta: [{ title: "EA Force — Mobile" }],
+    meta: [{ title: "EA Vault — Mobile" }],
     links: [{ rel: "manifest", href: "/manifest.webmanifest" }],
   }),
 });
@@ -179,7 +179,7 @@ function PhoneApp() {
           <AppRouter />
         </PhoneFrame>
         <p className="mt-4 hidden text-center text-xs text-slate-500 sm:block">
-          EA Force mobile preview — runs full-screen on iOS/Android
+          EA Vault mobile preview — runs full-screen on iOS/Android
         </p>
       </div>
     </div>
@@ -229,7 +229,7 @@ function InstallBanner() {
         onClick={onInstall}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-lg active:scale-[0.98]"
       >
-        📲 Install EA Force on your phone
+        📲 Install EA Vault on your phone
       </button>
       {showIos && (
         <div className="mt-2 rounded-lg border border-slate-300 bg-white p-3 text-xs text-slate-700">
@@ -526,7 +526,7 @@ function MentorGate({ onSuccess }: { onSuccess: (m: Mentor) => void }) {
       <div className="mb-6 grid h-20 w-20 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-2xl shadow-violet-500/40">
         <Bot className="h-10 w-10 text-white" />
       </div>
-      <h1 className="text-2xl font-bold">EA Force EA</h1>
+      <h1 className="text-2xl font-bold">EA Vault EA</h1>
       <p className="mt-1 text-sm text-white/60">Sign in with your email and Mentor ID</p>
 
       <form onSubmit={submit} className="mt-8 w-full space-y-3">
@@ -771,7 +771,7 @@ function HomeV1({ session, running, toggle, handleDelete, onOpenBubble }: HomeVP
       <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-black/70 px-4 py-1.5 ring-1 ring-white/10">
         <Flame className="h-3.5 w-3.5 text-orange-400" />
         <span className="text-[11px] text-white/60">Powered by:</span>
-        <span className="text-[11px] font-bold tracking-wider">EA FORCE</span>
+        <span className="text-[11px] font-bold tracking-wider">EA VAULT</span>
       </div>
       <ActionBar running={running} toggle={toggle} handleDelete={handleDelete} onOpenBubble={onOpenBubble} />
       <p className="mt-2 text-[10px] uppercase tracking-[0.3em] text-white/30">{running ? "STOP" : "START"}</p>
@@ -871,7 +871,7 @@ function HomeV4({ session, running, toggle, handleDelete, onOpenBubble }: HomeVP
       </div>
 
       <ActionBar running={running} toggle={toggle} handleDelete={handleDelete} onOpenBubble={onOpenBubble} />
-      <p className="mt-4 text-[10px] tracking-[0.35em] text-white/30">POWERED BY: EA FORCE</p>
+      <p className="mt-4 text-[10px] tracking-[0.35em] text-white/30">POWERED BY: EA VAULT</p>
     </div>
   );
 }
@@ -1005,7 +1005,7 @@ function TradeBubble({
 
           <div className="mt-4 flex justify-end">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500 px-3 py-1 text-[11px] font-bold text-white">
-              Powered by <span className="font-extrabold">EA FORCE</span>
+              Powered by <span className="font-extrabold">EA VAULT</span>
             </span>
           </div>
 
@@ -1590,7 +1590,7 @@ function MetaTraderScreen() {
               />
             </Field>
             <p className="rounded-xl bg-white/5 px-3 py-2 text-[11px] leading-relaxed text-white/50">
-              Live execution is handled by EA Force — no extra API keys needed. Just save your broker
+              Live execution is handled by EA Vault — no extra API keys needed. Just save your broker
               login and the bot trades straight into your MT4/MT5 account.
             </p>
             <button
@@ -2151,7 +2151,7 @@ function SettingsScreen({
         <Row label="Expires" value={new Date(session.expires_at).toLocaleDateString()} />
       </div>
 
-      <p className="mt-6 text-center text-[10px] tracking-[0.3em] text-white/30">POWERED BY: EA FORCE</p>
+      <p className="mt-6 text-center text-[10px] tracking-[0.3em] text-white/30">POWERED BY: EA VAULT</p>
     </div>
   );
 }
@@ -2220,7 +2220,7 @@ function HelpScreen() {
           </div>
         ))}
       </div>
-      <p className="mt-6 text-center text-[10px] tracking-[0.3em] text-white/30">POWERED BY: EA FORCE</p>
+      <p className="mt-6 text-center text-[10px] tracking-[0.3em] text-white/30">POWERED BY: EA VAULT</p>
     </div>
   );
 }

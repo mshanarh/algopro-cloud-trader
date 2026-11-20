@@ -82,7 +82,7 @@ function ProfilePage() {
             <h2 className="text-base font-bold">Reactivate App Access</h2>
           </div>
           <p className="mb-4 text-sm text-muted-foreground">
-            If the EA Force app says <b>"Account already used"</b>, tap below to reset your device binding.
+            If the EA Vault app says <b>"Account already used"</b>, tap below to reset your device binding.
             This only works for the paid email logged into this portal.
           </p>
           <button

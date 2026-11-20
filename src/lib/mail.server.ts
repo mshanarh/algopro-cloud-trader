@@ -1,16 +1,16 @@
 // Server-only email sending via Mailtrap's sending API (demo domain).
 const MAILTRAP_URL = "https://send.api.mailtrap.io/api/send";
 const FROM_EMAIL = "hello@demomailtrap.co";
-const FROM_NAME = "EA Force";
+const FROM_NAME = "EA Vault";
 
 function wrap(title: string, body: string) {
   return `<!doctype html><html><body style="margin:0;background:#f5f6f8;font-family:Arial,Helvetica,sans-serif">
   <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 12px">
     <table width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;padding:32px" cellpadding="0" cellspacing="0">
-      <tr><td style="font-size:13px;letter-spacing:3px;color:#7c3aed;font-weight:bold">EA FORCE</td></tr>
+      <tr><td style="font-size:13px;letter-spacing:3px;color:#7c3aed;font-weight:bold">EA VAULT</td></tr>
       <tr><td style="padding-top:12px;font-size:20px;font-weight:bold;color:#111827">${title}</td></tr>
       <tr><td style="padding-top:12px;font-size:15px;line-height:1.6;color:#374151">${body}</td></tr>
-      <tr><td style="padding-top:24px;font-size:12px;color:#9ca3af">You are receiving this because you registered an EA Force portal account.</td></tr>
+      <tr><td style="padding-top:24px;font-size:12px;color:#9ca3af">You are receiving this because you registered an EA Vault portal account.</td></tr>
     </table>
   </td></tr></table></body></html>`;
 }
@@ -40,7 +40,7 @@ export async function sendMail(opts: {
         subject: opts.subject,
         text: opts.text,
         html: opts.html ?? wrap(opts.title, opts.text.replace(/\n/g, "<br/>")),
-        category: "EA Force Portal",
+        category: "EA Vault Portal",
       }),
     });
     if (!res.ok) {
@@ -55,10 +55,10 @@ export async function sendMail(opts: {
   }
 }
 
-export const PENDING_SUBJECT = "We received your EA Force registration";
+export const PENDING_SUBJECT = "We received your EA Vault registration";
 export const PENDING_BODY =
   "We have received your registration and you are on our waiting list. Our team will review and approve your account shortly.";
 
-export const ACTIVE_SUBJECT = "Your EA Force portal is active";
+export const ACTIVE_SUBJECT = "Your EA Vault portal is active";
 export const ACTIVE_BODY =
   "Your portal has been activated successfully! You can now login and manage your EA.";

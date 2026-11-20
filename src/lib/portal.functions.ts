@@ -218,7 +218,7 @@ export const validateLicense = createServerFn({ method: "POST" })
       username: row.username,
       expires_at: row.expires_at,
       plan: row.plan as string,
-      ea_name: ea?.name ?? "EA Force Bot",
+      ea_name: ea?.name ?? "EA Vault Bot",
       symbols: (ea?.symbols ?? []) as string[],
       ea_image: (ea?.image_url ?? null) as string | null,
     };
@@ -239,7 +239,7 @@ export const getLicenseInfo = createServerFn({ method: "POST" })
       ok: true as const,
       status: row.status as string,
       expires_at: row.expires_at,
-      ea_name: ea?.name ?? "EA Force Bot",
+      ea_name: ea?.name ?? "EA Vault Bot",
       symbols: (ea?.symbols ?? []) as string[],
       ea_image: (ea?.image_url ?? null) as string | null,
     };

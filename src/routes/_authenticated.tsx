@@ -67,7 +67,7 @@ function PortalLayout() {
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background px-4 py-3 md:hidden">
         <Link to="/portal" className="flex items-center gap-2">
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-[image:var(--gradient-purple)] text-sm font-black text-primary-foreground">A</span>
-          <span className="font-bold">EA Force Portal</span>
+          <span className="font-bold">EA Vault Portal</span>
         </Link>
         <button onClick={() => setOpen(!open)} aria-label="Menu" className="rounded-md p-2 hover:bg-secondary">
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -84,7 +84,7 @@ function PortalLayout() {
           <div className="flex h-full flex-col">
             <Link to="/portal" className="hidden items-center gap-2 border-b border-border px-5 py-5 md:flex">
               <span className="grid h-9 w-9 place-items-center rounded-lg bg-[image:var(--gradient-purple)] text-sm font-black text-primary-foreground">A</span>
-              <span className="text-base font-bold">EA Force Portal</span>
+              <span className="text-base font-bold">EA Vault Portal</span>
             </Link>
             <nav className="flex-1 space-y-1 px-3 py-5">
               {NAV.map((item) => {
