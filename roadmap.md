@@ -1,0 +1,3 @@
+- [ ] Diagnose registration email delivery and make failures visible.
+- [ ] Rename Algopro branding to EA Vault across the app.
+- [ ] Run the required TanStack package security update and confirm build status.
