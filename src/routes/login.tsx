@@ -5,6 +5,8 @@ import { AlertCircle, CheckCircle2, LogIn, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { claimSignupApproval, notifyRegistrationPending } from "@/lib/portal.functions";
+import { isAutoApprovedEmail } from "@/lib/auto-approval";
+import { getLocalSession, startLocalSession } from "@/lib/local-session";
 import { PlatformLogo } from "@/components/PlatformLogo";
 
 export const Route = createFileRoute("/login")({
@@ -12,8 +14,15 @@ export const Route = createFileRoute("/login")({
     redirect: typeof search.redirect === "string" && search.redirect.startsWith("/") ? search.redirect : "/portal",
   }),
   beforeLoad: async ({ search }) => {
-    const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: search.redirect });
+    if (getLocalSession()) throw redirect({ to: "/portal" });
+    let hasSession = false;
+    try {
+      const { data } = await supabase.auth.getSession();
+      hasSession = !!data.session;
+    } catch {
+      // Supabase is not configured on this deployment yet.
+    }
+    if (hasSession) throw redirect({ to: search.redirect });
   },
   component: LoginPage,
   head: () => ({ meta: [{ title: "Sign in — EA Vault Portal" }] }),
@@ -80,6 +89,15 @@ function LoginPage() {
         return;
       }
     }
+
+    // Owner account: open the mentor portal locally, without Supabase.
+    if (isAutoApprovedEmail(email)) {
+      startLocalSession(email, displayName || fullName || "Mentor");
+      toast.success("Welcome to your mentor portal");
+      navigate({ to: "/portal", replace: true });
+      return;
+    }
+
     setLoading(true);
     try {
       if (mode === "signup") {

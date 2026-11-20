@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { useQuery, queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyStatus } from "@/lib/portal.functions";
+import { endLocalSession, getLocalSession } from "@/lib/local-session";
 
 const statusQ = queryOptions({
   queryKey: ["my-status"],
@@ -24,8 +25,14 @@ const statusQ = queryOptions({
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ location }) => {
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) throw redirect({ to: "/login", search: { redirect: location.href } });
+    if (getLocalSession()) return;
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) return;
+    } catch {
+      // Supabase is not configured on this deployment yet — fall through.
+    }
+    throw redirect({ to: "/login", search: { redirect: location.href } });
   },
   component: PortalLayout,
 });
@@ -42,18 +49,24 @@ function PortalLayout() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
-  const { data: status } = useQuery(statusQ);
+  const localSession = getLocalSession();
+  const { data: status } = useQuery({ ...statusQ, enabled: !localSession });
 
   useEffect(() => {
-    if (status && !status.approved) navigate({ to: "/pending", replace: true });
-  }, [navigate, status]);
+    if (!localSession && status && !status.approved) navigate({ to: "/pending", replace: true });
+  }, [localSession, navigate, status]);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    endLocalSession();
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Supabase is not configured on this deployment yet.
+    }
     navigate({ to: "/login", search: { redirect: "/portal" } });
   };
 
-  if (status && !status.approved) return null;
+  if (!localSession && status && !status.approved) return null;
 
 
   const NAV = status?.is_admin

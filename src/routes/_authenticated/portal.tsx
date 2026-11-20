@@ -1,6 +1,7 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useQuery, queryOptions } from "@tanstack/react-query";
 import { getDashboard } from "@/lib/portal.functions";
+import { getLocalSession } from "@/lib/local-session";
 import { PageHeader } from "@/components/portal/PageHeader";
 import { CheckCircle2, KeyRound, Bot, Activity } from "lucide-react";
 
@@ -23,27 +24,55 @@ function greeting() {
 }
 
 function Dashboard() {
-  const { data, isLoading, error } = useQuery(dashQ);
+  const localSession = getLocalSession();
+  const { data, isLoading, error } = useQuery({ ...dashQ, enabled: !localSession });
+
+  // A deployment without Supabase credentials must still render a dashboard
+  // instead of echoing the backend error back at the user.
+  const envMissing =
+    error instanceof Error && /missing supabase environment variable/i.test(error.message);
+  const preview = !!localSession || envMissing;
+
+  const data2 =
+    data ??
+    (preview
+      ? {
+          profile: {
+            full_name: localSession?.name ?? "Mentor",
+            display_name: localSession?.name ?? "Mentor",
+            mentor_id: "PREVIEW",
+            license_limit: 9999,
+          },
+          stats: { total: 0, active: 0, eas: 0 },
+        }
+      : null);
 
   if (isLoading) {
     return <PageHeader title="Opening portal..." subtitle="Loading your dashboard once." />;
   }
 
-  if (error || !data) {
+  if (!data2) {
     return <PageHeader title="Portal needs a refresh" subtitle={error instanceof Error ? error.message : "Please try again."} />;
   }
 
-  const name = data.profile?.display_name || data.profile?.full_name || "Trader";
-  const isUnlimited = (data.profile?.license_limit ?? 0) >= 9999;
-  const limit = isUnlimited ? 100 : Math.max(data.profile?.license_limit ?? 1, 1);
-  const usedPct = isUnlimited ? 100 : Math.min(100, (data.stats.active / limit) * 100);
+  const data_ = data2;
+
+  const name = data_.profile?.display_name || data_.profile?.full_name || "Trader";
+  const isUnlimited = (data_.profile?.license_limit ?? 0) >= 9999;
+  const limit = isUnlimited ? 100 : Math.max(data_.profile?.license_limit ?? 1, 1);
+  const usedPct = isUnlimited ? 100 : Math.min(100, (data_.stats.active / limit) * 100);
 
   return (
     <div>
-      <PageHeader title={`${greeting()}, ${name}`} subtitle={`Welcome to EA Vault Portal — All systems are running smoothly. You have ${data.stats.active} active licences.`}>
+      {preview && (
+        <div className="border-b border-brand/30 bg-brand/10 px-5 py-2 text-center text-xs font-medium text-brand">
+          Preview mode — the backend isn&apos;t connected yet, so these numbers are placeholders.
+        </div>
+      )}
+      <PageHeader title={`${greeting()}, ${name}`} subtitle={`Welcome to EA Vault Portal — All systems are running smoothly. You have ${data_.stats.active} active licences.`}>
         <div className="flex flex-wrap items-center gap-3">
           <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur">
-            Mentor ID: <span className="font-mono">{data.profile?.mentor_id}</span>
+            Mentor ID: <span className="font-mono">{data_.profile?.mentor_id}</span>
           </span>
           <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur">
             {new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
@@ -82,7 +111,7 @@ function Dashboard() {
             <KeyRound className="h-4 w-4 text-muted-foreground" />
           </div>
           <div className="mb-2 flex items-baseline gap-2">
-            <span className="text-3xl font-bold">{data.stats.active}</span>
+            <span className="text-3xl font-bold">{data_.stats.active}</span>
             <span className="text-sm text-muted-foreground">/ {isUnlimited ? "unlimited" : `${limit} keys`}</span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-secondary">
@@ -100,9 +129,9 @@ function Dashboard() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </div>
           <div className="space-y-3">
-            <Row icon={<CheckCircle2 className="h-4 w-4 text-accent" />} label="Active licences" value={data.stats.active} />
-            <Row icon={<KeyRound className="h-4 w-4 text-muted-foreground" />} label="Total issued" value={data.stats.total} />
-            <Row icon={<Bot className="h-4 w-4 text-muted-foreground" />} label="Expert Advisors" value={data.stats.eas} />
+            <Row icon={<CheckCircle2 className="h-4 w-4 text-accent" />} label="Active licences" value={data_.stats.active} />
+            <Row icon={<KeyRound className="h-4 w-4 text-muted-foreground" />} label="Total issued" value={data_.stats.total} />
+            <Row icon={<Bot className="h-4 w-4 text-muted-foreground" />} label="Expert Advisors" value={data_.stats.eas} />
           </div>
         </div>
       </div>
