@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { LogIn, UserPlus } from "lucide-react";
+import { AlertCircle, CheckCircle2, LogIn, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { claimSignupApproval, notifyRegistrationPending } from "@/lib/portal.functions";
@@ -57,9 +57,19 @@ function LoginPage() {
   const [mobile, setMobile] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState<
+    { kind: "error" | "info"; message: string; action?: "reset" | "resend" } | null
+  >(null);
+
+  const enterPortal = async (welcome: string) => {
+    await claimSignupApproval().catch(() => null);
+    toast.success(welcome);
+    navigate({ to: search.redirect || "/portal", replace: true });
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setNotice(null);
     if (mode === "signup") {
       if (!agreed) {
         toast.error("Please accept the Terms and Privacy Policy");
@@ -86,15 +96,39 @@ function LoginPage() {
             },
           },
         });
+
+        // The email may already exist from an earlier attempt. Try the password
+        // they just typed before telling them anything is wrong.
+        if (error && /already registered|already exists|user_already_exists/i.test(error.message)) {
+          const { error: retryErr } = await supabase.auth.signInWithPassword({ email, password });
+          if (!retryErr) {
+            await enterPortal("You already have an account — signed you in");
+            return;
+          }
+          setMode("signin");
+          setNotice({
+            kind: "error",
+            message:
+              "This email is already registered, but that password didn't work. Reset it below, or sign in.",
+            action: "reset",
+          });
+          return;
+        }
         if (error) throw error;
+
         if (!data.session) {
           const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
           if (signInErr) {
-            toast.success("Account created! Check your email to confirm, then sign in.");
             setMode("signin");
+            setNotice({
+              kind: "info",
+              message: "Account created — confirm your email address, then sign in.",
+              action: "resend",
+            });
             return;
           }
         }
+
         const approval = await claimSignupApproval().catch(() => null);
         if (approval?.approved) {
           toast.success("Account created and approved — welcome!");
@@ -111,15 +145,43 @@ function LoginPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         // Covers accounts created before auto-approval existed.
-        await claimSignupApproval().catch(() => null);
-        toast.success("Welcome Master");
+        await enterPortal("Welcome Master");
+        return;
       }
-      navigate({ to: search.redirect || "/portal", replace: true });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Authentication failed");
+      const message = err instanceof Error ? err.message : "Authentication failed";
+      if (/invalid login credentials/i.test(message)) {
+        setNotice({
+          kind: "error",
+          message: "Incorrect email or password for this account.",
+          action: "reset",
+        });
+      } else if (/email not confirmed/i.test(message)) {
+        setNotice({
+          kind: "info",
+          message: "Confirm your email address before signing in.",
+          action: "resend",
+        });
+      } else {
+        toast.error(message);
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const resendConfirmation = async () => {
+    if (!email.trim()) {
+      toast.error("Enter your email address first");
+      return;
+    }
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: email.trim(),
+      options: { emailRedirectTo: window.location.origin + "/portal" },
+    });
+    if (error) toast.error(error.message);
+    else toast.success("Confirmation email sent — check your inbox");
   };
 
   const onGoogle = async () => {
@@ -163,7 +225,7 @@ function LoginPage() {
         <div className="ea-rise ea-rise-2 mt-7 grid grid-cols-2 gap-1 rounded-full border border-border bg-secondary/40 p-1.5">
           <button
             type="button"
-            onClick={() => setMode("signin")}
+            onClick={() => { setMode("signin"); setNotice(null); }}
             aria-pressed={mode === "signin"}
             className={`rounded-full py-3 text-xs font-bold uppercase tracking-[0.2em] transition-all duration-300 ${
               mode === "signin"
@@ -175,7 +237,7 @@ function LoginPage() {
           </button>
           <button
             type="button"
-            onClick={() => setMode("signup")}
+            onClick={() => { setMode("signup"); setNotice(null); }}
             aria-pressed={mode === "signup"}
             className={`rounded-full py-3 text-xs font-bold uppercase tracking-[0.2em] transition-all duration-300 ${
               mode === "signup"
@@ -186,6 +248,44 @@ function LoginPage() {
             Register
           </button>
         </div>
+
+        {notice && (
+          <div
+            role="alert"
+            className={`mt-6 rounded-2xl border p-4 text-sm ${
+              notice.kind === "error"
+                ? "border-destructive/40 bg-destructive/10 text-destructive"
+                : "border-brand/40 bg-brand/10 text-brand"
+            }`}
+          >
+            <div className="flex items-start gap-2.5">
+              {notice.kind === "error" ? (
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              ) : (
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+              )}
+              <p className="flex-1 leading-relaxed">{notice.message}</p>
+            </div>
+            {notice.action === "reset" && (
+              <button
+                type="button"
+                onClick={onForgotPassword}
+                className="mt-3 w-full rounded-full bg-brand px-4 py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-brand-foreground transition-all duration-300 hover:brightness-110"
+              >
+                Email me a reset link
+              </button>
+            )}
+            {notice.action === "resend" && (
+              <button
+                type="button"
+                onClick={resendConfirmation}
+                className="mt-3 w-full rounded-full bg-brand px-4 py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-brand-foreground transition-all duration-300 hover:brightness-110"
+              >
+                Resend confirmation email
+              </button>
+            )}
+          </div>
+        )}
 
         <form onSubmit={onSubmit} className="mt-7 space-y-5">
           {mode === "signup" && (
