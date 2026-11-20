@@ -173,3 +173,44 @@
   0%, 100% { opacity: 0.25; transform: translateY(-10%); }
   50% { opacity: 0.6; transform: translateY(10%); }
 }
+
+/* Landing page motion — black / red theme */
+@keyframes ea-rise {
+  from { opacity: 0; transform: translate3d(0, 26px, 0) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes ea-float-slow {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -14px, 0); }
+}
+
+@keyframes ea-glow-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.08); }
+}
+
+.ea-rise {
+  animation: ea-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.ea-rise-1 { animation-delay: 0.08s; }
+.ea-rise-2 { animation-delay: 0.16s; }
+.ea-rise-3 { animation-delay: 0.24s; }
+.ea-rise-4 { animation-delay: 0.34s; }
+.ea-rise-5 { animation-delay: 0.44s; }
+.ea-rise-6 { animation-delay: 0.54s; }
+
+.ea-float-slow { animation: ea-float-slow 7s ease-in-out infinite; }
+.ea-float-slower { animation: ea-float-slow 9s ease-in-out infinite; }
+.ea-glow-pulse { animation: ea-glow-pulse 8s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ea-rise,
+  .ea-float-slow,
+  .ea-float-slower,
+  .ea-glow-pulse {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
