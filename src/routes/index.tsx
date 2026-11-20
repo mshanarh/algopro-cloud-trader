@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import appPreview from "@/assets/app-preview.jpg.asset.json";
+import heroPhone from "@/assets/hero-phone.png";
 import {
   Apple,
   ArrowRight,
@@ -31,9 +31,9 @@ export const Route = createFileRoute("/")({
         property: "og:description",
         content: "24/7 EA hosting, news event trading and MT4/MT5 support from your phone.",
       },
-      { property: "og:image", content: appPreview.url },
+      { property: "og:image", content: heroPhone },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:image", content: appPreview.url },
+      { name: "twitter:image", content: heroPhone },
     ],
   }),
   component: Landing,
@@ -219,27 +219,27 @@ function PhoneShowcase() {
       />
 
       <div className="relative flex items-center justify-center py-6">
-        <div
+        <img
+          src={heroPhone}
+          alt=""
           aria-hidden
-          className="absolute left-0 top-10 hidden h-[300px] w-[160px] rotate-[-13deg] overflow-hidden rounded-[1.8rem] border border-white/10 opacity-45 sm:block"
-        >
-          <img src={appPreview.url} alt="" className="h-full w-full object-cover object-top" />
-        </div>
-        <div
+          className="absolute left-0 top-8 hidden w-[170px] rotate-[-13deg] opacity-35 blur-[1px] sm:block"
+        />
+        <img
+          src={heroPhone}
+          alt=""
           aria-hidden
-          className="absolute right-0 top-10 hidden h-[300px] w-[160px] rotate-[13deg] overflow-hidden rounded-[1.8rem] border border-white/10 opacity-45 sm:block"
-        >
-          <img src={appPreview.url} alt="" className="h-full w-full object-cover object-top" />
-        </div>
+          className="absolute right-0 top-8 hidden w-[170px] rotate-[13deg] opacity-35 blur-[1px] sm:block"
+        />
 
-        <div className="ea-float-slow relative z-10 w-[230px] rounded-[2.2rem] border border-[#e11d2f]/40 bg-[#08080a] p-2 shadow-[0_40px_90px_-35px_rgba(225,29,47,0.8)]">
-          <img
-            src={appPreview.url}
-            alt="EA Vault mobile app showing a hosted expert advisor with play controls and licence keys"
-            className="w-full rounded-[1.8rem]"
-            loading="eager"
-          />
-        </div>
+        <img
+          src={heroPhone}
+          alt="EA Vault mobile app showing a hosted expert advisor with play controls and licence keys"
+          className="ea-float-slow relative z-10 w-[230px] drop-shadow-[0_28px_60px_rgba(225,29,47,0.55)] sm:w-[270px]"
+          loading="eager"
+          width={1024}
+          height={1024}
+        />
 
         <FeaturePill
           icon={TrendingUp}
